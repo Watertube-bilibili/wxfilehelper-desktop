@@ -1,5 +1,6 @@
 """Application entry point. SPDX-License-Identifier: AGPL-3.0-only."""
 import sys
+from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont
@@ -12,6 +13,8 @@ def main():
     if smoke_test and sys.platform == "win32" and getattr(sys, "frozen", False):
         if app.platformName() != "windows":
             raise RuntimeError(f"Expected native Windows platform, got {app.platformName()!r}")
+        from .windows_startup import verify_loaded_runtime
+        verify_loaded_runtime(Path(sys._MEIPASS))
     app.setApplicationName("WX FileHelper Desktop")
     app.setOrganizationName("wxfilehelper-desktop")
     app.setQuitOnLastWindowClosed(False)

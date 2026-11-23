@@ -40,6 +40,28 @@ def prepare_qt(bundle: Path) -> None:
         raise WindowsStartupError(f"{component.name}\n{detail}") from error
 
 
+def verify_loaded_runtime(bundle: Path) -> None:
+    """In the packaged smoke test, ensure the GUI did not borrow host libraries."""
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    module = kernel.GetModuleHandleW
+    module.argtypes = (ctypes.c_wchar_p,)
+    module.restype = ctypes.c_void_p
+    filename = kernel.GetModuleFileNameW
+    filename.argtypes = (ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint32)
+    filename.restype = ctypes.c_uint32
+    bundle = bundle.resolve()
+    for name in (
+        "qwindows.dll", "Qt6Core.dll", "Qt6Gui.dll", "Qt6Widgets.dll",
+        "MSVCP140.dll", "MSVCP140_1.dll", "MSVCP140_2.dll", "VCRUNTIME140.dll", "VCRUNTIME140_1.dll",
+    ):
+        handle = module(name)
+        path = ctypes.create_unicode_buffer(32768)
+        if not handle or not filename(handle, path, len(path)):
+            raise RuntimeError(f"Could not find the loaded module {name}")
+        if not Path(path.value).resolve().is_relative_to(bundle):
+            raise RuntimeError(f"{name} loaded from outside the bundle: {path.value}")
+
+
 def show_startup_error(error: Exception) -> None:
     version = sys.getwindowsversion()
     message = (
