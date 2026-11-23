@@ -176,6 +176,18 @@ def test_failed_chunk_never_sends_message(client, monkeypatch, tmp_path):
     with pytest.raises(ProtocolError):
         client.send_file(path)
 
+def test_only_final_upload_chunk_can_authorize_send(client, monkeypatch, tmp_path):
+    path = tmp_path / "multipart.txt"
+    path.write_bytes(b"x" * (CHUNK_SIZE + 1))
+    responses = iter([
+        Response(payload={"BaseResponse": {"Ret": 0}, "MediaId": "partial"}),
+        Response(payload={"BaseResponse": {"Ret": 0}}),
+    ])
+    monkeypatch.setattr(client, "_request", lambda *a, **kw: next(responses))
+    monkeypatch.setattr(client, "_send", lambda *a, **kw: pytest.fail("must not send a partial file"))
+    with pytest.raises(ProtocolError, match="file ID"):
+        client.send_file(path)
+
 
 def test_partial_download_preserves_existing_file(client, monkeypatch, tmp_path):
     target = tmp_path / "test.txt"
@@ -185,6 +197,14 @@ def test_partial_download_preserves_existing_file(client, monkeypatch, tmp_path)
         client.download(Message("1", "image", "test.jpg"), target)
     assert target.read_text() == "original"
     assert not list(tmp_path.glob("*.part"))
+
+def test_partial_video_range_is_never_saved_as_complete(client, monkeypatch, tmp_path):
+    target = tmp_path / "clip.mp4"
+    response = Response(b"first", status=206, headers={"Content-Length": "5", "Content-Range": "bytes 0-4/100"})
+    monkeypatch.setattr(client, "_request", lambda *a, **kw: response)
+    with pytest.raises(ProtocolError, match="Incomplete download"):
+        client.download(Message("1", "video", target.name), target)
+    assert not target.exists()
 
 
 @pytest.mark.parametrize("data,content_type", [(b"real-file", "application/octet-stream"), (b"<html>my file</html>", "text/html"), (b'{"hello":1}', "application/json")])
