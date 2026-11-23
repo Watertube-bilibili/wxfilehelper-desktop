@@ -1,4 +1,3 @@
-#define AppVersion "0.1.0-beta.1"
 #define Repo "https://github.com/Watertube-bilibili/wxfilehelper-desktop"
 [Setup]
 AppId={{1F1B99D3-7B37-4A07-9345-091DEDE09978}
@@ -15,7 +14,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-MinVersion=10.0
+MinVersion=10.0.17763
 LicenseFile=..\LICENSE
 InfoBeforeFile=..\DISCLAIMER.md
 UninstallDisplayIcon={app}\WXFileHelper.exe

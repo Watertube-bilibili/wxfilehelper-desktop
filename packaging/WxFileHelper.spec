@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 import os
 from pathlib import Path
+from runpy import run_path
 
 root = Path(SPECPATH).parent
+version = run_path(str(root / "wxfilehelper" / "__init__.py"))["__version__"]
 onefile = os.environ.get("WX_ONEFILE") == "1"
-name = "WXFileHelper-0.1.0-beta.1-Windows-x64-Portable" if onefile else "WXFileHelper"
+name = f"WXFileHelper-{version}-Windows-x64-Portable" if onefile else "WXFileHelper"
 data = [(str(root / "LICENSE"), "."), (str(root / "DISCLAIMER.md"), "."),
         (str(root / "THIRD_PARTY_NOTICES.md"), "."), (str(root / "licenses"), "licenses")]
 a = Analysis([str(root / "run.py")], pathex=[str(root)], binaries=[], datas=data,
