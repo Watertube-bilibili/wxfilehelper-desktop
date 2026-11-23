@@ -29,13 +29,15 @@
 | `WXFileHelper-…-Windows-x64-Portable.exe` | 单文件免安装版，直接运行；运行时会在系统临时目录解压运行库 |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
 
-1. 使用 Windows 10/11 64 位系统运行应用。
+1. 使用 Windows 10 1809（内部版本 17763）及以上或 Windows 11 的 x64 版本。已安装旧版时，退出应用，在原目录运行新版安装程序即可升级。使用便携版时，退出旧进程后运行新版 EXE。
 2. 用手机微信扫一扫，并在手机上确认登录。点击标签栏的 `+` 后，可以用另一个微信账号扫码。
 3. 核对当前标签，输入文字或添加文件，再点击「发送」。手机端使用「文件传输助手」会话。
 4. 收到附件后点击「另存为」，自行选择保存位置。
 5. 课堂或共享电脑使用后，退出应用并按需清理下载文件。
 
 `Ctrl+Enter` 发送，`Ctrl+O` 添加文件，`Ctrl+T` 添加标签，`Ctrl+Tab` 切换标签。窄窗口会收紧留白和输入区，大屏模式会放大内容。Qt 跟随系统 DPI 缩放。
+
+如果看到 Qt 提示 “Reinstalling the application may fix this problem”，请从 [Windows 启动修复版](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases/tag/v0.2.0-beta.3) 下载对应 EXE。新版自带 Windows 平台插件和配套运行库。如果新版仍提示启动失败，反馈时请附弹窗中的组件名、Windows 版本和错误码。程序检测到组件加载错误时，会尝试将这些信息写到 `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`。
 
 ### 当前边界
 
@@ -102,7 +104,9 @@ Open [Releases](https://github.com/Watertube-bilibili/wxfilehelper-desktop/relea
 | `WXFileHelper-…-Windows-x64-Portable.exe` | Single EXE; extracts bundled runtime libraries to the system temporary directory at launch |
 | `SHA256SUMS.txt` | SHA-256 checksums |
 
-Run on 64-bit Windows 10/11, scan with WeChat on your phone, and confirm sign-in. Click `+` to add the second account. Check which tab is active before sending. Use the File Transfer conversation on your phone and “Save as” to keep received files. Quit and clean up downloaded files after using a shared computer.
+Run on x64 Windows 10 version 1809 (build 17763) or later, or Windows 11. To upgrade, quit the app and run Setup over the existing installation, or launch the new portable EXE. Scan with WeChat on your phone and confirm sign-in. Click `+` to add a second account. Check which tab is active before sending. Use the File Transfer conversation on your phone and “Save as” to keep received files. Quit and clean up downloaded files after using a shared computer.
+
+If Qt showed “Reinstalling the application may fix this problem”, download the corresponding EXE from the [Windows startup fix release](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases/tag/v0.2.0-beta.3). The Windows plugin and matching runtime ship with the app. If startup still fails, include the component name, Windows build and error code shown in the dialog. When the app detects a component load failure, it also tries to write those details to `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`.
 
 `Ctrl+Enter` sends, `Ctrl+O` adds files, `Ctrl+T` adds a tab and `Ctrl+Tab` switches tabs. Small windows use tighter spacing. Qt follows system DPI scaling.
 

@@ -21,6 +21,7 @@ threading, security checks, packaging, and tests are maintained in this reposito
 | --- | --- | --- |
 | CPython | PSF-2.0 | https://github.com/python/cpython |
 | Qt / PySide6 Essentials / Shiboken6 | LGPL-3.0, with Qt third-party notices | https://code.qt.io/cgit/pyside/pyside-setup.git/ and https://code.qt.io/cgit/qt/qtbase.git/ |
+| Microsoft Visual C++ runtime (Windows) / 微软 Visual C++ 运行库 | Microsoft redistributable code, supplied with the PySide6 Windows wheel / 随 PySide6 Windows 包提供，适用微软可再发行代码条款 | [Microsoft redistribution list](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution) |
 | Requests | Apache-2.0 | https://github.com/psf/requests |
 | urllib3 | MIT | https://github.com/urllib3/urllib3 |
 | certifi | MPL-2.0 | https://github.com/certifi/python-certifi |

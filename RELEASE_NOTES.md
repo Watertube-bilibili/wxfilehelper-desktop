@@ -1,21 +1,15 @@
-# v0.2.0-beta.2 · 恢复经典侧栏 / Classic sidebar returns
+# v0.2.0-beta.3 · Windows 启动修复 / Windows startup fix
 
 ## 中文
 
-- 恢复左侧导航。常用的「文件传输」「本次会话文件」和下载文件夹可以直接找到。账号标签放在对话区顶部。
-- 收紧消息卡片和文件队列的排版，让文件名、大小和「另存为」更容易扫读。小窗把辅助操作收进菜单，发送按钮和文件筛选保留在主界面。
-- 两个微信账号分别扫码登录。切换标签时继续传输。大屏模式放大控件并隐藏昵称。
-
-在 Assets 中选择安装版 `Setup.exe` 或单文件版 `Portable.exe`，并用 `SHA256SUMS.txt` 核对下载。适用于 Windows 10/11 x64，预览包未签名。每个文件上限 25 MiB。
-
-此前已验证真实单账号扫码和文字同步。双账号并发和异常恢复已通过模拟测试，真实双账号附件互传和教室触屏仍待实测。项目采用 AGPL-3.0-only，与腾讯无隶属关系。[双语免责声明](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md)
+- 修复旧 EXE 受其他软件的 Qt 平台设置影响而提示 “Reinstalling the application may fix this problem” 的启动故障。安装版和便携版均使用包内的 Windows 平台插件及同一版本的 Visual C++ 运行库。
+- 安装版覆盖升级时清理早期包遗留的两个 ICU 文件。遇到系统版本过低、安装包损坏等情况时，安装程序会给出中英文提示。启动时检测到 Qt 组件加载错误，弹窗会列出组件与错误信息，并尝试将诊断写入 `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`。
+- 适用系统为 Windows 10 1809（内部版本 17763）及以上、Windows 11，x64。退出旧版后运行新的 `Setup.exe` 覆盖安装，或直接运行新的 `Portable.exe`。可用 `SHA256SUMS.txt` 校验。预览版未签名。
 
 ## English
 
-- The classic sidebar returns, with direct access to the conversation, session files and downloads. Account tabs sit above the conversation.
-- More compact messages and file queues make names, sizes and Save as easy to scan. Small windows move secondary actions into a menu and keep Send and file filtering in view.
-- Both WeChat accounts sign in separately. Transfers continue while switching tabs. Classroom mode enlarges controls and hides nicknames.
+- Fixed a reproducible launch failure in which a Qt platform setting inherited from another program triggered “Reinstalling the application may fix this problem.” Both packages use their own Windows platform plugin and a matching set of Visual C++ libraries.
+- Setup removes two obsolete ICU files when upgrading an early installation. Setup provides bilingual messages for an unsupported Windows build or damaged installer. If the app detects a Qt component load failure, the dialog shows the component and error details. It also attempts to save a report at `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`.
+- Requires Windows 10 version 1809 (build 17763) or later, or Windows 11, x64. Quit the old app and run the new `Setup.exe` over your installation, or run the new `Portable.exe`. Verify the download with `SHA256SUMS.txt`. Preview binaries are unsigned.
 
-Choose the installer `Setup.exe` or single-file `Portable.exe` under Assets. Verify downloads with `SHA256SUMS.txt`. Runs on Windows 10/11 x64. Preview binaries are unsigned. Each file may be up to 25 MiB.
-
-Live single-account QR sign-in and text sync were verified earlier. Simulated tests cover concurrent accounts and recovery from transfer failures. Live dual-account file transfers and classroom touchscreens still need testing. This independent AGPL-3.0-only project is unaffiliated with Tencent. [Bilingual disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md)
+[中英双语免责声明 / Bilingual disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md)

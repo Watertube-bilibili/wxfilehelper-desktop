@@ -5,9 +5,21 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    report = os.environ.get("WXFILEHELPER_SMOKE_REPORT") if "--smoke-test" in sys.argv else None
+    smoke = "--smoke-test" in sys.argv
+    report = os.environ.get("WXFILEHELPER_SMOKE_REPORT") if smoke else None
     try:
-        from wxfilehelper.app import main
+        if sys.platform == "win32" and getattr(sys, "frozen", False):
+            from wxfilehelper.windows_startup import WindowsStartupError, prepare_qt, show_startup_error
+            try:
+                prepare_qt(Path(sys._MEIPASS))
+                from wxfilehelper.app import main
+            except (WindowsStartupError, ImportError) as error:
+                if smoke:
+                    raise
+                show_startup_error(error)
+                raise SystemExit(1)
+        else:
+            from wxfilehelper.app import main
         code = main()
     except Exception:
         if not report:
