@@ -45,7 +45,7 @@
 - 图片支持 PNG/JPEG/BMP；其他文件可作为普通附件发送。暂不支持完整微信聊天功能、语音播放、表情发送或历史消息云恢复。
 - 更新提示不会自动安装。当前 EXE **未签名**，Windows 可能显示发布者未知的提示。
 - 界面采用 Fluent/UWP 视觉风格，程序本身是 **Qt Win32 EXE**，不是 UWP/MSIX 或微软商店应用。
-- 本仓库专门发布 **Windows** 版；macOS 将在独立仓库维护，不在此仓库混合发布。
+- 本仓库发布 **Windows** 版。macOS 源码和发行文件见 [macOS 独立仓库](https://github.com/Watertube-bilibili/wxfilehelper-macos)。
 
 ### 从源码运行
 
@@ -114,7 +114,7 @@ Run on 64-bit Windows 10/11, scan with WeChat on your phone, and confirm sign-in
 - PNG/JPEG/BMP image sending is supported; other formats can be sent as attachments. Full WeChat chat features, voice playback, outgoing stickers, and cloud history restoration are outside this release.
 - Update checks do not install updates. Current EXEs are **unsigned**.
 - Fluent/UWP describes the appearance. This is a **Qt Win32 application**, not UWP/MSIX or a Microsoft Store package.
-- This repository publishes **Windows** builds. macOS is maintained separately.
+- This repository publishes **Windows** builds. For macOS, see the [separate macOS repository](https://github.com/Watertube-bilibili/wxfilehelper-macos).
 
 ### Development
 
