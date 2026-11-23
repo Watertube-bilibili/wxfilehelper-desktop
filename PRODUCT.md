@@ -28,6 +28,8 @@ Offer a focused, fully open-source native file-transfer client.
 - Windows installer EXE and one-file portable EXE; attempt macOS distribution.
 - Bilingual Chinese/English README and release notes.
 - Bilingual disclaimer. Automatic update checks. Fluent/UWP appearance and classroom display mode.
+- Two independently authorized account tabs, each with its own background transfers and pending queue.
+- Support compact layouts and large displays with the same native controls.
 - Windows release first; macOS source and releases belong in a separate public repository.
 - User explicitly rejected an embedded webpage and reverse-engineering tools.
 - Use normal QR authorization and publicly available open-source protocol references.
