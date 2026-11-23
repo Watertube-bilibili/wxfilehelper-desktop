@@ -1,0 +1,41 @@
+name: Verify published Windows EXEs
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published Windows release tag
+        default: v0.2.0-beta.3
+        required: true
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and start both public EXEs
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RELEASE_TAG -cnotmatch '^v\d+\.\d+\.\d+(-(?:alpha|beta|rc)\.\d+)?$') { throw 'Invalid release tag' }
+          $version = $env:RELEASE_TAG.Substring(1)
+          $base = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG"
+          $manifest = (Invoke-WebRequest "$base/SHA256SUMS.txt").Content
+          if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
+          foreach ($type in 'Portable','Setup') {
+            $name = "WXFileHelper-$version-Windows-x64-$type.exe"
+            $file = Join-Path $env:RUNNER_TEMP $name
+            Invoke-WebRequest "$base/$name" -OutFile $file
+            $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            if (($manifest -split '\r?\n') -cnotcontains "$digest  $name") { throw "Checksum mismatch for $name" }
+            ./scripts/smoke_windows.ps1 -Executable $file
+          }
