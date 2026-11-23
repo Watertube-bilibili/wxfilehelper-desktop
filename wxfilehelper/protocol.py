@@ -10,8 +10,10 @@ import hashlib
 import html
 import json
 import mimetypes
+import os
 import re
 import secrets
+import stat
 import threading
 import time
 from dataclasses import dataclass, field
@@ -30,7 +32,7 @@ REGIONS = {
 }
 ALLOWED_HOSTS = frozenset(REGIONS) | frozenset(h for pair in REGIONS.values() for h in pair)
 CHUNK_SIZE = 512 * 1024
-MAX_FILE_SIZE = 25 * 1024 * 1024  # Conservative v0.1 client limit, not an upstream claim.
+MAX_FILE_SIZE = 25 * 1024 * 1024
 
 
 class ProtocolError(Exception):
@@ -331,38 +333,50 @@ class FileHelperClient:
         path = Path(path)
         if not path.is_file():
             raise ProtocolError("File is unavailable / 文件不存在或不可读取")
-        size = path.stat().st_size
-        if not 0 < size <= MAX_FILE_SIZE:
-            raise ProtocolError("This version supports files from 1 byte to 25 MiB / 本版支持 1 字节至 25 MiB 文件")
         if not self.logged_in:
             raise SessionExpired("Scan to sign in first / 请先扫码登录")
         data_ticket = next((c.value for c in self._cookies if c.name == "webwx_data_ticket"), "")
         if not data_ticket:
             raise SessionExpired("Missing upload authorization; scan again / 上传授权失效，请重新扫码")
-        digest = hashlib.md5(usedforsecurity=False)
-        with path.open("rb") as source:
-            for block in iter(lambda: source.read(CHUNK_SIZE), b""):
-                if self.cancel.is_set():
-                    raise Cancelled("Cancelled / 已取消")
-                digest.update(block)
-        request = {"UploadType": 2, "BaseRequest": self.base, "ClientMediaId": int(time.time() * 1000),
-                   "TotalLen": size, "StartPos": 0, "DataLen": size, "MediaType": 4,
-                   "FromUserName": self.username, "ToUserName": "filehelper", "FileMd5": digest.hexdigest()}
-        chunks = (size + CHUNK_SIZE - 1) // CHUNK_SIZE
         mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         image = image and mime in ("image/png", "image/jpeg", "image/bmp")
         media_id = ""
         with path.open("rb") as source:
+            info = os.fstat(source.fileno())
+            size = info.st_size
+            if not stat.S_ISREG(info.st_mode) or not 0 < size <= MAX_FILE_SIZE:
+                raise ProtocolError("This version supports files from 1 byte to 25 MiB / 本版支持 1 字节至 25 MiB 文件")
+            chunks = (size + CHUNK_SIZE - 1) // CHUNK_SIZE
+            changed = "File changed while sending; save it and try again / 文件在发送时发生变化，请保存后重试"
+            digest = hashlib.md5(usedforsecurity=False)
             for index in range(chunks):
+                if self.cancel.is_set():
+                    raise Cancelled("Cancelled / 已取消")
+                count = min(CHUNK_SIZE, size - index * CHUNK_SIZE)
+                data = source.read(count)
+                if len(data) != count:
+                    raise ProtocolError(changed)
+                digest.update(data)
+            source.seek(0)
+            request = {"UploadType": 2, "BaseRequest": self.base, "ClientMediaId": int(time.time() * 1000),
+                       "TotalLen": size, "StartPos": 0, "DataLen": size, "MediaType": 4,
+                       "FromUserName": self.username, "ToUserName": "filehelper", "FileMd5": digest.hexdigest()}
+            modified = time.strftime("%a %b %d %Y %H:%M:%S GMT+0000", time.gmtime(info.st_mtime))
+            for index in range(chunks):
+                count = min(CHUNK_SIZE, size - index * CHUNK_SIZE)
+                data = source.read(count)
+                current = os.fstat(source.fileno())
+                if len(data) != count or (current.st_size, current.st_mtime_ns) != (size, info.st_mtime_ns):
+                    raise ProtocolError(changed)
                 fields = {"id": "WU_FILE_0", "name": path.name, "type": mime,
-                          "lastModifiedDate": time.strftime("%a %b %d %Y %H:%M:%S GMT+0000", time.gmtime(path.stat().st_mtime)),
+                          "lastModifiedDate": modified,
                           "size": str(size), "mediatype": "pic" if image else "doc",
                           "uploadmediarequest": json.dumps(request, ensure_ascii=False),
                           "webwx_data_ticket": data_ticket, "pass_ticket": self.ticket}
                 if chunks > 1:
                     fields.update(chunks=str(chunks), chunk=str(index))
                 multipart = {key: (None, value) for key, value in fields.items()}
-                multipart["filename"] = (path.name, source.read(CHUNK_SIZE), mime)
+                multipart["filename"] = (path.name, data, mime)
                 with self._request("POST", f"https://{self.file_host}{ROOT}webwxuploadmedia",
                                    params={"f": "json"}, files=multipart) as response:
                     try:
@@ -370,8 +384,11 @@ class FileHelperClient:
                     except ValueError:
                         raise ProtocolError("Invalid upload response / 上传响应异常") from None
                 self._check(result)
-                media_id = result.get("MediaId") or media_id
+                media_id = result.get("MediaId")
                 progress(min(95, int((index + 1) / chunks * 95)))
+            current = os.fstat(source.fileno())
+            if (current.st_size, current.st_mtime_ns) != (size, info.st_mtime_ns):
+                raise ProtocolError(changed)
         if not media_id:
             raise ProtocolError("Upload did not return a file ID / 上传未返回文件标识")
         msg_id = self._send(3, media=media_id) if image else self._send(6, file_message_xml(path.name, size, media_id))
@@ -397,10 +414,19 @@ class FileHelperClient:
             raise ProtocolError("This message cannot be downloaded / 此消息不支持下载")
         target = Path(target)
         temporary = target.with_name(target.name + "." + secrets.token_hex(6) + ".part")
+        headers = {"Accept-Encoding": "identity"}
+        if message.kind == "video":
+            headers["Range"] = "bytes=0-"
         try:
             with self._request("GET", f"https://{host}{ROOT}{endpoint}", params=params,
-                               stream=True, headers={"Range": "bytes=0-"} if message.kind == "video" else {}) as response:
-                total = int(response.headers.get("Content-Length", 0))
+                               stream=True, headers=headers) as response:
+                total = int(response.headers.get("Content-Length", 0)) if response.headers.get(
+                    "Content-Encoding", "identity") == "identity" else 0
+                if response.status_code == 206:
+                    content_range = re.fullmatch(r"bytes 0-(\d+)/(\d+)", response.headers.get("Content-Range", ""))
+                    if not content_range or int(content_range[1]) + 1 != int(content_range[2]):
+                        raise ProtocolError("Incomplete download / 下载不完整，请重试")
+                    total = int(content_range[2])
                 received = 0
                 with temporary.open("xb") as output:
                     for block in response.iter_content(64 * 1024):
@@ -448,4 +474,4 @@ class FileHelperClient:
                 session.close()
             self._sessions.clear()
         self._cookies.clear()
-        self.sid = self.skey = self.uin = self.ticket = self.username = ""
+        self.sid = self.skey = self.uin = self.ticket = self.username = self.nickname = self.uuid = ""
