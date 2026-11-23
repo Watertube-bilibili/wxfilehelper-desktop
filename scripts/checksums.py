@@ -1,12 +1,16 @@
+"""Generate SHA-256 checksums for the specified release assets."""
 import hashlib
+import sys
 from pathlib import Path
 
-dist = Path(__file__).resolve().parents[1] / "dist"
-artifacts = sorted([*dist.glob("*.exe"), *dist.glob("*.zip"), *dist.glob("*.dmg")])
+paths = sorted(Path(value).resolve(strict=True) for value in sys.argv[1:])
+if not paths or len({path.parent for path in paths}) != 1:
+    raise SystemExit("Pass at least one asset in the same output folder")
 lines = []
-for path in artifacts:
+for path in paths:
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     lines.append(f"{digest}  {path.name}")
-(dist / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-print("\n".join(lines))
+manifest = "\n".join(lines) + "\n"
+(paths[0].parent / "SHA256SUMS.txt").write_text(manifest, encoding="utf-8")
+print(manifest, end="")
