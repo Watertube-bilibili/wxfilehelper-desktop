@@ -14,7 +14,7 @@
 - **双账号标签页**：点击 `+` 添加第二个微信账号。两个标签的登录、消息、草稿和文件队列各自独立，切换时继续收发。
 - 原生文字收发、图片发送、附件分块上传、手动下载保存。
 - 拖入或选择文件后，在待发送列表核对文件名和大小，可移除单项。发送时显示当前进度，可在当前项完成后暂停，失败与未发送的项目保留供重试。
-- Fluent / UWP 风格界面，中英文切换，原生窗口、文件选择器和系统托盘。
+- Fluent / UWP 风格界面。普通窗口左侧提供会话导航和下载入口，小窗口将辅助功能收进菜单。支持中英文切换、原生文件选择器和系统托盘。
 - **教室大屏模式**：点击「大屏模式」或按 `F11`，进入全屏、放大字号、二维码和触控按钮，并隐藏微信昵称。按 `Esc` 或点击退出按钮恢复。
 - **自动检查更新**：启动后和运行期间每 6 小时查询本仓库 GitHub Releases，也可手动检查。发现新版本后展示提示，点击进入发布页；不会静默下载或执行安装程序。
 - 登录凭据与会话消息仅驻留内存。退出后重新扫码；本版不持久化聊天记录。
@@ -87,7 +87,7 @@ python -m venv .venv
 - **Two account tabs.** Click `+` to scan with a second WeChat account. Sessions, messages, drafts and file queues stay separate. Transfers keep running while you switch tabs.
 - Native text messaging, image sending, chunked attachment uploads, and manual save dialogs.
 - Review filenames and sizes in the queue, remove individual files and see progress for the current item. You can stop after an item and send the remaining files later.
-- Fluent/UWP-inspired appearance, Chinese/English UI, native windows/file pickers, and a system tray menu.
+- Fluent/UWP-inspired appearance, with a sidebar in regular windows and a compact menu in smaller ones. Includes a Chinese/English UI, native file pickers and a system tray menu.
 - **Classroom mode.** Click “Large screen” or press `F11` for full screen, larger text, a larger QR code and bigger touch targets. Nicknames are hidden. Press `Esc` or use the visible exit button to return.
 - **Automatic update checks:** at startup and every six hours, plus a manual check. New versions link to this repository's GitHub Release page. No silent installer downloads or execution.
 - Login credentials and messages stay in process memory. Restarting requires another scan; chat history is not persisted in this release.
