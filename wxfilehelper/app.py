@@ -9,6 +9,9 @@ from .ui import MainWindow
 def main():
     smoke_test = "--smoke-test" in sys.argv
     app = QApplication(sys.argv[:1] if smoke_test else sys.argv)
+    if smoke_test and sys.platform == "win32" and getattr(sys, "frozen", False):
+        if app.platformName() != "windows":
+            raise RuntimeError(f"Expected native Windows platform, got {app.platformName()!r}")
     app.setApplicationName("WX FileHelper Desktop")
     app.setOrganizationName("wxfilehelper-desktop")
     app.setQuitOnLastWindowClosed(False)
