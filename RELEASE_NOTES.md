@@ -1,15 +1,19 @@
-# v0.2.0-beta.3 · Windows 启动修复 / Windows startup fix
+# 1.2.0 · 原生架构预览 / Native architecture preview
 
 ## 中文
 
-- 修复旧 EXE 受其他软件的 Qt 平台设置影响而提示 “Reinstalling the application may fix this problem” 的启动故障。安装版和便携版均使用包内的 Windows 平台插件及同一版本的 Visual C++ 运行库。
-- 安装版覆盖升级时清理早期包遗留的两个 ICU 文件。遇到系统版本过低、安装包损坏等情况时，安装程序会给出中英文提示。启动时检测到 Qt 组件加载错误，弹窗会列出组件与错误信息，并尝试将诊断写入 `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`。
-- 适用系统为 Windows 10 1809（内部版本 17763）及以上、Windows 11，x64。退出旧版后运行新的 `Setup.exe` 覆盖安装，或直接运行新的 `Portable.exe`。可用 `SHA256SUMS.txt` 校验。预览版未签名。
+Windows 安装版和单文件版共用一个 Go/Win32 可执行程序，无需单独安装 Python、Qt 或 WebView2。最低目标是 Windows 10 1507（内部版本 10240）x64。安装程序使用独立的安装目录。
+
+支持双账号扫码、文字和文件收发、文件队列、系统打开与保存对话框、教室大屏和更新检查。程序不会自动安装更新。macOS 版保留独立仓库。
+
+已验证当前 Windows 环境中的原生启动、安装和卸载，以及传输核心从微信服务获取两张独立登录二维码。1507 客户端上的启动、扫码确认和真实文件收发仍待实测。Windows EXE 为未签名预览包。
 
 ## English
 
-- Fixed a reproducible launch failure in which a Qt platform setting inherited from another program triggered “Reinstalling the application may fix this problem.” Both packages use their own Windows platform plugin and a matching set of Visual C++ libraries.
-- Setup removes two obsolete ICU files when upgrading an early installation. Setup provides bilingual messages for an unsupported Windows build or damaged installer. If the app detects a Qt component load failure, the dialog shows the component and error details. It also attempts to save a report at `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`.
-- Requires Windows 10 version 1809 (build 17763) or later, or Windows 11, x64. Quit the old app and run the new `Setup.exe` over your installation, or run the new `Portable.exe`. Verify the download with `SHA256SUMS.txt`. Preview binaries are unsigned.
+The Windows installer and single-file package use the same Go/Win32 executable and require no separate Python, Qt, or WebView2 installation. The compatibility target is x64 Windows 10 version 1507 (build 10240). Setup uses a dedicated installation directory.
 
-[中英双语免责声明 / Bilingual disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md)
+Includes independent account tabs, QR authorization, text and file transfers, an outgoing queue, native open/save dialogs, classroom mode, and update checks that link to GitHub. macOS remains in its own repository.
+
+Native startup, setup, and uninstall were verified in the current Windows test environment. Two independent login QR images were received from WeChat using the new transport. Startup, QR confirmation, and live file transfers on Windows 10 1507 still require end-to-end testing. Windows preview EXEs are unsigned.
+
+[免责声明 / Disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md) · [macOS](https://github.com/Watertube-bilibili/wxfilehelper-macos)

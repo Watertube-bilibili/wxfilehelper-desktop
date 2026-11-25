@@ -1,4 +1,7 @@
 .venv/
+.venv-win10-1507/
+native/cmd/wxfilehelper/*.syso
+native/packaging/windows/go-license.txt
 __pycache__/
 *.py[cod]
 .pytest_cache/

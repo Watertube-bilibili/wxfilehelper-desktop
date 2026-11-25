@@ -1,137 +1,68 @@
-# WX FileHelper Desktop · 微信文件传输助手桌面版
+# 微信文件传输助手桌面版 · WX FileHelper Desktop
 
-[中文](#中文) · [English](#english) · [下载 / Downloads](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases) · [免责声明 / Disclaimer](DISCLAIMER.md)
-
-**原生 Qt 桌面应用，无内嵌网页或浏览器内核。 / Native Qt desktop app, without an embedded webpage or browser engine.**
-
-这是独立的第三方开源项目，与腾讯、微信无隶属关系。This is an independent project, not affiliated with Tencent or WeChat.
+[中文](#中文) · [English](#english) · [Windows 下载](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases) · [macOS 仓库](https://github.com/Watertube-bilibili/wxfilehelper-macos) · [免责声明 / Disclaimer](DISCLAIMER.md)
 
 ## 中文
 
-### 功能
+1.2 的传输核心使用 Go。Windows 界面采用 Win32，macOS 界面采用 AppKit。软件直接连接微信文件传输服务，通过手机微信扫码授权。本项目独立维护，与腾讯和微信无隶属关系。
 
-- 微信扫码授权，直接通过 HTTPS 与文件传输助手服务通信。
-- **双账号标签页**：点击 `+` 添加第二个微信账号。两个标签的登录、消息、草稿和文件队列各自独立，切换时继续收发。
-- 原生文字收发、图片发送、附件分块上传、手动下载保存。
-- 拖入或选择文件后，在待发送列表核对文件名和大小，可移除单项。发送时显示当前进度，可在当前项完成后暂停，失败与未发送的项目保留供重试。
-- Fluent / UWP 风格界面。普通窗口左侧提供会话导航和下载入口，小窗口将辅助功能收进菜单。支持中英文切换、原生文件选择器和系统托盘。
-- **教室大屏模式**：点击「大屏模式」或按 `F11`，进入全屏、放大字号、二维码和触控按钮，并隐藏微信昵称。按 `Esc` 或点击退出按钮恢复。
-- **自动检查更新**：启动后和运行期间每 6 小时查询本仓库 GitHub Releases，也可手动检查。发现新版本后展示提示，点击进入发布页；不会静默下载或执行安装程序。
-- 登录凭据与会话消息仅驻留内存。退出后重新扫码；本版不持久化聊天记录。
-
-### 下载与使用
-
-前往 [Releases](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases) 选择：
+### Windows 下载与使用
 
 | 文件 | 用途 |
 | --- | --- |
-| `WXFileHelper-…-Windows-x64-Setup.exe` | 安装版，安装到当前用户目录，带卸载入口；无需管理员权限 |
-| `WXFileHelper-…-Windows-x64-Portable.exe` | 单文件免安装版，直接运行；运行时会在系统临时目录解压运行库 |
-| `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
+| `WXFileHelper-1.2.0-Windows-x64-Portable.exe` | 单文件，双击运行 |
+| `WXFileHelper-1.2.0-Windows-x64-Setup.exe` | 当前用户安装，提供开始菜单和卸载入口 |
+| `SHA256SUMS.txt` | 核对两个 EXE 的 SHA-256 |
 
-1. 使用 Windows 10 1809（内部版本 17763）及以上或 Windows 11 的 x64 版本。已安装旧版时，退出应用，在原目录运行新版安装程序即可升级。使用便携版时，退出旧进程后运行新版 EXE。
-2. 用手机微信扫一扫，并在手机上确认登录。点击标签栏的 `+` 后，可以用另一个微信账号扫码。
-3. 核对当前标签，输入文字或添加文件，再点击「发送」。手机端使用「文件传输助手」会话。
-4. 收到附件后点击「另存为」，自行选择保存位置。
-5. 课堂或共享电脑使用后，退出应用并按需清理下载文件。
+- 兼容目标为 **Windows 10 1507（内部版本 10240）及以上的 x64 系统**。两个包都无需另装 Python、Qt 或 WebView2。
+- 用手机微信扫一扫，确认授权，再在当前标签发送文字或文件。点击 `+` 可添加第二个账号。两个标签各自保留消息和待发送文件。
+- 选择、拖入或粘贴文件，核对发送列表后点击「发送」。每批最多 100 个文件，每项 1 字节到 25 MiB。发送失败时未完成的文件仍可重试。
+- 选中收到的文件后「另存为」。大屏模式放大主要操作并隐藏昵称。更新检查显示可用版本，点击后可到 GitHub 获取安装包。
+- 1.2 安装版使用独立目录和开始菜单项。登录会话驻留内存，首次启动需要重新扫码。
 
-`Ctrl+Enter` 发送，`Ctrl+O` 添加文件，`Ctrl+T` 添加标签，`Ctrl+Tab` 切换标签。窄窗口会收紧留白和输入区，大屏模式会放大内容。Qt 跟随系统 DPI 缩放。
+### 从源码构建
 
-如果看到 Qt 提示 “Reinstalling the application may fix this problem”，请从 [Windows 启动修复版](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases/tag/v0.2.0-beta.3) 下载对应 EXE。新版自带 Windows 平台插件和配套运行库。如果新版仍提示启动失败，反馈时请附弹窗中的组件名、Windows 版本和错误码。程序检测到组件加载错误时，会尝试将这些信息写到 `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`。
-
-### 当前边界
-
-- **第三方预览版**。每批最多添加 **100 个文件**，每个文件最多 **25 MiB**。
-- 使用的是已有开源项目中描述的服务接口，不是腾讯承诺稳定的公开开发者 API；账户和网络条件可能影响可用性。
-- 此前已验证单账号真实扫码与文字同步。本版的双账号并发收发、失败保留和多种窗口尺寸已通过模拟服务和界面测试。真实双账号、文件互传和不同品牌触控大屏仍需实测。
-- 图片支持 PNG/JPEG/BMP；其他文件可作为普通附件发送。暂不支持完整微信聊天功能、语音播放、表情发送或历史消息云恢复。
-- 更新提示不会自动安装。当前 EXE **未签名**，Windows 可能显示发布者未知的提示。
-- 界面采用 Fluent/UWP 视觉风格，程序本身是 **Qt Win32 EXE**，不是 UWP/MSIX 或微软商店应用。
-- 本仓库发布 **Windows** 版。macOS 源码和发行文件见 [macOS 独立仓库](https://github.com/Watertube-bilibili/wxfilehelper-macos)。
-
-### 从源码运行
-
-需要 Python 3.11+；发行构建使用 Python 3.13。
+需要 x64 Go 1.26 和 Inno Setup 6。项目源码位于 `native/`。首次构建会下载固定版本的 Go 资源编译工具。
 
 ```powershell
-git clone https://github.com/Watertube-bilibili/wxfilehelper-desktop.git
-cd wxfilehelper-desktop
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe run.py
+cd native
+go test ./internal/...
+cd ..
+.\native\packaging\windows\build.ps1 -Verify
 ```
 
-### 测试与构建
+生成的 EXE 位于 `native/dist/windows/`。若工具位于自定义目录，可传入 `-Go` 或 `-Iscc`。macOS 独立发布，两种架构的构建步骤在 [macOS 仓库](https://github.com/Watertube-bilibili/wxfilehelper-macos)。旧 0.2 的 Python/Qt 源码见 [历史标签](https://github.com/Watertube-bilibili/wxfilehelper-desktop/tree/v0.2.0-beta.3)。
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m pytest -q
-.\scripts\build_windows.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
-```
+### 隐私与许可
 
-从 [Inno Setup 官网](https://jrsoftware.org/isinfo.php) 安装编译器，并按实际路径调整 `-Iscc`。请在只安装了项目依赖的虚拟环境中构建。脚本会收集许可证、启动验证两种应用包，并在 `dist/` 生成 EXE 和校验文件。安装版保留可替换的 Qt 共享库。
+登录票据、消息和发送队列仅在进程内存中保留。收到的文件由用户选择保存位置。微信服务处理扫码和文件传输，GitHub 接收更新检查请求。每个账号须自行扫码授权。微信服务接口、账户条件和网络状态可能影响可用性。[双语免责声明](DISCLAIMER.md)
 
-### 隐私、许可和免责声明
-
-项目不运营中转服务器、不收集遥测、不保存登录口令。微信服务会收到授权后的通信请求，GitHub 会收到更新检查请求。语言及下载目录偏好保存在本机设置中；下载文件保存在你指定的位置。
-
-本项目以 **AGPL-3.0-only** 发布，见 [LICENSE](LICENSE)。第三方库保持其原许可，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-**使用前请阅读完整的[中英双语免责声明](DISCLAIMER.md)。** 软件按现状提供，接口可能变化；请遵守适用法律、微信规则和机构政策，备份重要文件，并在大屏展示前确认内容适合公开。
-
-提交 Issue 时请移除二维码、登录票据、Cookie、聊天内容和个人文件。不要把凭据贴到公开仓库。
+采用 **AGPL-3.0-only**。 [许可证](LICENSE) · [第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## English
 
-### Features
+Version 1.2 uses a shared Go transfer core with Win32 on Windows and AppKit on macOS. It connects directly to WeChat File Transfer, with sign-in approved by scanning a QR code in WeChat. This independently maintained project is unaffiliated with Tencent and WeChat.
 
-- QR authorization with WeChat, communicating directly with File Transfer HTTPS services.
-- **Two account tabs.** Click `+` to scan with a second WeChat account. Sessions, messages, drafts and file queues stay separate. Transfers keep running while you switch tabs.
-- Native text messaging, image sending, chunked attachment uploads, and manual save dialogs.
-- Review filenames and sizes in the queue, remove individual files and see progress for the current item. You can stop after an item and send the remaining files later.
-- Fluent/UWP-inspired appearance, with a sidebar in regular windows and a compact menu in smaller ones. Includes a Chinese/English UI, native file pickers and a system tray menu.
-- **Classroom mode.** Click “Large screen” or press `F11` for full screen, larger text, a larger QR code and bigger touch targets. Nicknames are hidden. Press `Esc` or use the visible exit button to return.
-- **Automatic update checks:** at startup and every six hours, plus a manual check. New versions link to this repository's GitHub Release page. No silent installer downloads or execution.
-- Login credentials and messages stay in process memory. Restarting requires another scan; chat history is not persisted in this release.
+### Download and use on Windows
 
-### Download and run
-
-Open [Releases](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases):
-
-| Asset | Purpose |
+| Asset | Use |
 | --- | --- |
-| `WXFileHelper-…-Windows-x64-Setup.exe` | Per-user installer with uninstall support; no administrator rights required |
-| `WXFileHelper-…-Windows-x64-Portable.exe` | Single EXE; extracts bundled runtime libraries to the system temporary directory at launch |
-| `SHA256SUMS.txt` | SHA-256 checksums |
+| `WXFileHelper-1.2.0-Windows-x64-Portable.exe` | Single executable. Double-click to launch. |
+| `WXFileHelper-1.2.0-Windows-x64-Setup.exe` | Per-user installation with a Start menu and uninstaller. |
+| `SHA256SUMS.txt` | SHA-256 checksums for both executables. |
 
-Run on x64 Windows 10 version 1809 (build 17763) or later, or Windows 11. To upgrade, quit the app and run Setup over the existing installation, or launch the new portable EXE. Scan with WeChat on your phone and confirm sign-in. Click `+` to add a second account. Check which tab is active before sending. Use the File Transfer conversation on your phone and “Save as” to keep received files. Quit and clean up downloaded files after using a shared computer.
+- Targets **x64 Windows 10 version 1507 (build 10240) or later**. Both packages run without a Python, Qt, or WebView2 installation.
+- Scan with WeChat and approve sign-in. Select `+` to add a second independently authorized account. Each tab maintains its own messages and outgoing file queue.
+- Pick, drag, or paste files and review the queue before sending. A batch supports up to 100 files of 1 byte to 25 MiB each. Files that fail or remain unsent stay in the queue for retry.
+- Select an incoming attachment to save it. Classroom mode enlarges key controls and hides account names. Update checks link to the corresponding GitHub release.
+- The 1.2 installer uses its own directory and Start menu group. A fresh launch requires QR sign-in.
 
-If Qt showed “Reinstalling the application may fix this problem”, download the corresponding EXE from the [Windows startup fix release](https://github.com/Watertube-bilibili/wxfilehelper-desktop/releases/tag/v0.2.0-beta.3). The Windows plugin and matching runtime ship with the app. If startup still fails, include the component name, Windows build and error code shown in the dialog. When the app detects a component load failure, it also tries to write those details to `%LOCALAPPDATA%\WXFileHelper\startup-error.txt`.
+### Build from source
 
-`Ctrl+Enter` sends, `Ctrl+O` adds files, `Ctrl+T` adds a tab and `Ctrl+Tab` switches tabs. Small windows use tighter spacing. Qt follows system DPI scaling.
+Use x64 Go 1.26 and Inno Setup 6. Run `go test ./internal/...` from `native/`, then run `native/packaging/windows/build.ps1 -Verify` from the repository root. The first build downloads a pinned Go resource compiler. Outputs are under `native/dist/windows/`. This repository distributes the Windows application. The [separate macOS repository](https://github.com/Watertube-bilibili/wxfilehelper-macos) ships both Mac architectures. The earlier Python/Qt implementation is available at its [0.2 tag](https://github.com/Watertube-bilibili/wxfilehelper-desktop/tree/v0.2.0-beta.3).
 
-### Preview limitations
+### Privacy and licensing
 
-- This is an **independent preview**. A batch can contain up to **100 files** of up to **25 MiB each**.
-- Interfaces are informed by existing open-source clients and are not stable public developer APIs. Account policies and network conditions can affect availability.
-- Real single-account QR sign-in and text synchronization were verified earlier. This release uses simulated service tests for concurrent accounts and transfer failures, plus layout tests at several window sizes. Live testing of two accounts, file transfers and physical touchscreens remains pending.
-- PNG/JPEG/BMP image sending is supported; other formats can be sent as attachments. Full WeChat chat features, voice playback, outgoing stickers, and cloud history restoration are outside this release.
-- Update checks do not install updates. Current EXEs are **unsigned**.
-- Fluent/UWP describes the appearance. This is a **Qt Win32 application**, not UWP/MSIX or a Microsoft Store package.
-- This repository publishes **Windows** builds. For macOS, see the [separate macOS repository](https://github.com/Watertube-bilibili/wxfilehelper-macos).
+Session credentials, messages, and queued file paths stay in memory. Received files are saved where you choose. WeChat processes sign-in and transfer requests. GitHub receives update checks. The service interface, account eligibility, and network conditions can affect availability. [Bilingual disclaimer](DISCLAIMER.md)
 
-### Development
-
-Use Python 3.11+ (release builds use 3.13). Create a fresh virtual environment, install `requirements.txt` and run `python run.py`. To build a release, install `requirements-dev.txt`, run `python -m pytest -q` and run `scripts/build_windows.ps1` with the path to an official Inno Setup compiler. The script collects dependency notices, tests both packaged executables at launch and writes the release assets to `dist/`.
-
-Qt is dynamically linked and WebEngine is excluded. You can modify the application and rebuild it with replacement LGPL-covered libraries using the included build scripts.
-
-### Privacy, license, and disclaimer
-
-No project-operated relay, telemetry collection, or credential persistence. WeChat receives authorized service requests; GitHub receives update-check requests. Language/download-folder preferences stay in local settings, and files are saved where you choose.
-
-Licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
-
-**Read the full [bilingual disclaimer](DISCLAIMER.md).** The software is provided as is, interfaces may change, and important files should be backed up. Follow applicable laws, service rules, and institutional policies. Review content before presenting on a shared display.
-
-Remove QR codes, tickets, cookies, messages, and private files before submitting a public issue.
+Licensed under **AGPL-3.0-only**. [License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
