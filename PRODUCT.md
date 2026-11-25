@@ -10,8 +10,8 @@ Native desktop application for Windows and macOS; no embedded website or browser
 
 ## Stack
 
-Delegated by the user: Python and Qt Widgets (PySide6 Essentials), PyInstaller,
-Windows installer, and GitHub Actions for macOS packaging.
+Go transfer core, native Win32 controls on Windows and AppKit on macOS.
+Windows packages use Inno Setup, and GitHub Actions builds macOS packages.
 
 ## Users
 

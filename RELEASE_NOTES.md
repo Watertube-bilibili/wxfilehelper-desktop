@@ -1,19 +1,17 @@
-# 1.2.0 · 原生架构预览 / Native architecture preview
+# 1.2.1 · Windows Fluent 界面更新 / Windows Fluent interface update
 
 ## 中文
 
-Windows 安装版和单文件版共用一个 Go/Win32 可执行程序，无需单独安装 Python、Qt 或 WebView2。最低目标是 Windows 10 1507（内部版本 10240）x64。安装程序使用独立的安装目录。
-
-支持双账号扫码、文字和文件收发、文件队列、系统打开与保存对话框、教室大屏和更新检查。程序不会自动安装更新。macOS 版保留独立仓库。
-
-已验证当前 Windows 环境中的原生启动、安装和卸载，以及传输核心从微信服务获取两张独立登录二维码。1507 客户端上的启动、扫码确认和真实文件收发仍待实测。Windows EXE 为未签名预览包。
+- 以浅色 Fluent 样式重做 Windows 界面，恢复经典侧栏。当前账号用蓝色指示条标记。
+- 收发消息分别靠左和靠右。文件消息突出文件名、大小和时间，并可选中后直接「另存为」。待发文件、输入框和发送按钮合在同一区域。
+- 小窗收起侧栏，保留标签与发送操作。教室大屏在空间足够时将文件队列放到输入框旁边，给聊天多留位置。
+- 安装版和单文件版保留 Go/Win32 架构，目标为 Windows 10 1507（内部版本 10240）及以上的 x64 系统。安装和启动已在现代 Windows 环境验证，1507 真机仍待验证。EXE 未签名。
 
 ## English
 
-The Windows installer and single-file package use the same Go/Win32 executable and require no separate Python, Qt, or WebView2 installation. The compatibility target is x64 Windows 10 version 1507 (build 10240). Setup uses a dedicated installation directory.
-
-Includes independent account tabs, QR authorization, text and file transfers, an outgoing queue, native open/save dialogs, classroom mode, and update checks that link to GitHub. macOS remains in its own repository.
-
-Native startup, setup, and uninstall were verified in the current Windows test environment. Two independent login QR images were received from WeChat using the new transport. Startup, QR confirmation, and live file transfers on Windows 10 1507 still require end-to-end testing. Windows preview EXEs are unsigned.
+- Reworked the Windows app in a light Fluent style with the classic sidebar. A blue indicator identifies the active account.
+- Incoming and outgoing messages align to opposite sides. File messages emphasize the filename, size, and time. Select an attachment to save it. Queued files, the editor, and Send share a single composer.
+- Compact windows collapse the sidebar and retain tabs and sending controls. Classroom mode moves the queue beside the editor when the window is wide enough.
+- Both EXEs use the Go/Win32 architecture and target x64 Windows 10 version 1507 (build 10240) or later. Installation and startup were verified on current Windows. A live 1507 test is still pending. The EXEs are unsigned.
 
 [免责声明 / Disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md) · [macOS](https://github.com/Watertube-bilibili/wxfilehelper-macos)

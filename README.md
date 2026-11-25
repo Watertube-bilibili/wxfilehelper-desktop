@@ -10,8 +10,8 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `WXFileHelper-1.2.0-Windows-x64-Portable.exe` | 单文件，双击运行 |
-| `WXFileHelper-1.2.0-Windows-x64-Setup.exe` | 当前用户安装，提供开始菜单和卸载入口 |
+| `WXFileHelper-1.2.1-Windows-x64-Portable.exe` | 单文件，双击运行 |
+| `WXFileHelper-1.2.1-Windows-x64-Setup.exe` | 当前用户安装，提供开始菜单和卸载入口 |
 | `SHA256SUMS.txt` | 核对两个 EXE 的 SHA-256 |
 
 - 兼容目标为 **Windows 10 1507（内部版本 10240）及以上的 x64 系统**。两个包都无需另装 Python、Qt 或 WebView2。
@@ -47,8 +47,8 @@ Version 1.2 uses a shared Go transfer core with Win32 on Windows and AppKit on m
 
 | Asset | Use |
 | --- | --- |
-| `WXFileHelper-1.2.0-Windows-x64-Portable.exe` | Single executable. Double-click to launch. |
-| `WXFileHelper-1.2.0-Windows-x64-Setup.exe` | Per-user installation with a Start menu and uninstaller. |
+| `WXFileHelper-1.2.1-Windows-x64-Portable.exe` | Single executable. Double-click to launch. |
+| `WXFileHelper-1.2.1-Windows-x64-Setup.exe` | Per-user installation with a Start menu and uninstaller. |
 | `SHA256SUMS.txt` | SHA-256 checksums for both executables. |
 
 - Targets **x64 Windows 10 version 1507 (build 10240) or later**. Both packages run without a Python, Qt, or WebView2 installation.
