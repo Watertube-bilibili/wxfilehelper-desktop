@@ -6,7 +6,7 @@ on:
     inputs:
       tag:
         description: Published Windows release tag
-        default: v1.2.1
+        default: v1.2.2
         required: true
 permissions:
   contents: read
@@ -39,6 +39,8 @@ jobs:
             if (($manifest -split '\r?\n') -cnotcontains "$digest  $name") { throw "Checksum mismatch for $name" }
             if ($version -match '^0\.') {
               ./scripts/smoke_windows.ps1 -Executable $file
+            } elseif ($type -eq 'Setup' -and [version]($version -split '-')[0] -ge [version]'1.2.2') {
+              ./native/packaging/windows/smoke.ps1 -Executable $file -VerifyShortcuts
             } else {
               ./native/packaging/windows/smoke.ps1 -Executable $file
             }
