@@ -127,6 +127,15 @@ func TestExplorerTrayLifecycle(t *testing.T) {
 		if visible() || len(a.c.Snapshot().Accounts) != 2 {
 			t.Fatal("close did not keep both accounts in background")
 		}
+		if os.Getenv("WXFILEHELPER_TEST_BALLOON") == "1" {
+			n := a.iconData(r.iconID)
+			n.Flags, n.InfoFlags = 0x10, 0x81
+			setShellText(n.Title[:], "WX FileHelper · 后台通知测试")
+			setShellText(n.Info[:], "通知示例.txt")
+			if !shellNotify(1, &n) {
+				t.Fatal("Explorer rejected the test NIF_INFO notification")
+			}
+		}
 		callback := uintptr(r.iconID)<<16 | 0x405
 		send.Call(a.h, trayMessage, 0, callback)
 		if !visible() || a.c.Snapshot().Active != second {
