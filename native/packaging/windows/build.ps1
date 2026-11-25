@@ -72,7 +72,7 @@ try {
         throw "Installer compilation failed"
     }
     if ($Verify) {
-        & "$PSScriptRoot/smoke.ps1" -Executable $installer
+        & "$PSScriptRoot/smoke.ps1" -Executable $installer -VerifyShortcuts
     }
     @($portable, $installer) | ForEach-Object {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()

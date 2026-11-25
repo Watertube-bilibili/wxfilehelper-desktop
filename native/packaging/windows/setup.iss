@@ -1,6 +1,9 @@
 #define Repo "https://github.com/Watertube-bilibili/wxfilehelper-desktop"
 #define AppName "WX FileHelper Desktop"
 #define AppPublisher "WX FileHelper Desktop contributors"
+#define LinkName "WX FileHelper"
+#define RunKey "Software\Microsoft\Windows\CurrentVersion\Run"
+#define RunValue "WXFileHelperDesktop.Native"
 
 [Setup]
 AppId={{6D2C9269-414D-46E2-8E62-A2C3DC74AACC}
@@ -36,6 +39,14 @@ WinVersionTooLowError=需要 64 位 Windows 10 1507（内部版本 10240）或�
 OnlyOnTheseArchitectures=此包需要可运行 x64 应用的系统。%nThis installer requires x64 application support.%n%n%1
 SetupFileCorrupt=安装包完整性检查失败。请重新下载并核对 SHA256SUMS.txt。%nInstaller integrity check failed. Download it again and verify SHA256SUMS.txt.
 
+[Tasks]
+Name: "desktopicon"; Description: "创建桌面快捷方式 / Create a desktop shortcut"; GroupDescription: "快捷方式 / Shortcuts"
+Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in the tray at sign-in"; GroupDescription: "启动 / Startup"; Flags: unchecked
+
+[InstallDelete]
+; An upgrade also applies a user's newly unchecked tasks to links from the last install.
+Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Tasks: not desktopicon; Check: ManageLink('{userdesktop}')
+
 [Files]
 Source: "..\..\dist\windows\WXFileHelper-{#AppVersion}-Windows-x64-Portable.exe"; DestDir: "{app}"; DestName: "WXFileHelper.exe"; Flags: ignoreversion
 Source: "..\..\..\LICENSE"; DestDir: "{app}"
@@ -48,6 +59,38 @@ Source: "go-license.txt"; DestDir: "{app}\licenses"
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\WXFileHelper.exe"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
+Name: "{userdesktop}\{#LinkName}"; Filename: "{app}\WXFileHelper.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: ManageLink('{userdesktop}')
+
+[Registry]
+Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValue}"; ValueData: """{app}\WXFileHelper.exe"" --background"; Tasks: autostart; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "{#RunKey}"; ValueType: none; ValueName: "{#RunValue}"; Tasks: not autostart; Flags: dontcreatekey deletevalue; Check: OwnStartupEntry
 
 [Run]
 Filename: "{app}\WXFileHelper.exe"; Description: "Launch / 启动 WX FileHelper Desktop"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function OwnStartupEntry: Boolean;
+var
+  Current: String;
+begin
+  Result := RegQueryStringValue(HKCU, '{#RunKey}', '{#RunValue}', Current) and
+    (CompareText(Current, ExpandConstant('"{app}\WXFileHelper.exe" --background')) = 0);
+end;
+
+function ManageLink(const Folder: String): Boolean;
+var
+  Filename: String;
+  Shell, Shortcut: Variant;
+begin
+  Filename := ExpandConstant(Folder + '\{#LinkName}.lnk');
+  Result := not FileExists(Filename);
+  if Result then Exit;
+  try
+    Shell := CreateOleObject('WScript.Shell');
+    Shortcut := Shell.CreateShortcut(Filename);
+    Result := CompareText(Shortcut.TargetPath, ExpandConstant('{app}\WXFileHelper.exe')) = 0;
+  except
+    Result := False;
+  end;
+  if not Result then Log('Preserving existing shortcut: ' + Filename);
+end;
