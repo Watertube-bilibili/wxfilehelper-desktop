@@ -25,6 +25,16 @@ function Invoke-Hidden([string]$Path, [string[]]$Arguments) {
     finally { $process.Dispose() }
 }
 
+function Invoke-Setup([string]$Path, [string[]]$Arguments) {
+    # Inno Setup hands off to a temporary process and must finish its entire
+    # process tree before the install directory or registry is checked.
+    $process = Start-Process -FilePath $Path -ArgumentList $Arguments -WorkingDirectory $sandbox `
+        -WindowStyle Hidden -Wait -PassThru
+    if ($process.ExitCode -ne 0) {
+        throw "Exit $($process.ExitCode): $Path (logs: $sandbox)"
+    }
+}
+
 if ($isInstaller -and (Test-Path -LiteralPath $uninstallKey)) {
     throw "A native 1.2 installation is already registered. Test the installer on a clean profile."
 }
@@ -32,7 +42,7 @@ New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 try {
     $app = $package
     if ($isInstaller) {
-        Invoke-Hidden $package @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/SP-", "/NORESTART", "/NOICONS", "/DIR=`"$target`"", "/LOG=`"$sandbox\setup.log`"")
+        Invoke-Setup $package @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/SP-", "/NORESTART", "/NOICONS", "/DIR=`"$target`"", "/LOG=`"$sandbox\setup.log`"")
         $app = Join-Path $target "WXFileHelper.exe"
         if ((Get-ChildItem -LiteralPath $target -Filter "*.dll" -File -Recurse).Count -ne 0) {
             throw "The installer included an external DLL"
@@ -50,7 +60,7 @@ finally {
     if ($isInstaller) {
         $uninstaller = Join-Path $target "unins000.exe"
         if (Test-Path -LiteralPath $uninstaller) {
-            Invoke-Hidden $uninstaller @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$sandbox\uninstall.log`"")
+            Invoke-Setup $uninstaller @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$sandbox\uninstall.log`"")
             if ((Test-Path -LiteralPath (Join-Path $target "WXFileHelper.exe")) -or (Test-Path -LiteralPath $uninstallKey)) {
                 throw "Uninstall did not remove the test installation"
             }
