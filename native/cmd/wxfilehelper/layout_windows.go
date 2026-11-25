@@ -3,6 +3,8 @@ package main
 
 import (
 	"fmt"
+	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/desktop"
@@ -165,7 +167,12 @@ func (a *window) layout() {
 		}
 		editY := rowY - editH - 6
 		put(idEditor, left, editY, width, editH)
-		mid := editY - 5
+		cueHeight := 21
+		if a.room {
+			cueHeight = 30
+		}
+		a.caption(a.tr("消息  ·  Ctrl+Enter 发送", "Message  ·  Ctrl+Enter to send"), left, editY-cueHeight, width, cueHeight, a.smallFont, muted, singleLine)
+		mid := editY - cueHeight - 4
 		if len(a.account.Files) > 0 {
 			queueH := max(28, min(h/11, (btnH-5)*min(3, len(a.account.Files))+4))
 			if h < 480 {
@@ -332,6 +339,64 @@ func (a *window) drawButton(d *drawItem) {
 		r.Top += 3
 		r.Right -= 3
 		r.Bottom -= 3
+		user32.NewProc("DrawFocusRect").Call(d.DC, uintptr(unsafe.Pointer(&r)))
+	}
+}
+
+func (a *window) drawListRow(d *drawItem) {
+	r := d.Bounds
+	selected := d.State&1 != 0
+	bg := white
+	if selected {
+		bg = paleBlue
+	}
+	fill(d.DC, r, bg)
+	if d.Item == 0xffffffff {
+		return
+	}
+	index := int(d.Item)
+	row := r
+	row.Left += int32(a.px(11))
+	row.Right -= int32(a.px(10))
+	if d.ID == idQueue {
+		if index >= len(a.account.Files) {
+			return
+		}
+		file := a.account.Files[index]
+		name := row
+		name.Right -= int32(a.px(110))
+		textAt(d.DC, file.Name, name, a.font, ink, singleLine)
+		textAt(d.DC, fileSize(file.Size), row, a.smallFont, muted, singleLine|2)
+	} else if index < len(a.messageIDs) {
+		for _, m := range a.account.Messages {
+			if m.ID != a.messageIDs[index] {
+				continue
+			}
+			who := a.tr("来自手机", "From phone")
+			if m.Outgoing {
+				who = a.tr("此电脑", "This PC")
+			}
+			metadata := who + "   ·   " + time.Unix(m.Timestamp, 0).Format("15:04")
+			if isAttachment(m) && m.Size > 0 {
+				metadata += "   ·   " + fileSize(m.Size)
+			}
+			meta := row
+			meta.Top += int32(a.px(2))
+			meta.Bottom = r.Top + (r.Bottom-r.Top)*46/100
+			tone := muted
+			if m.Outgoing {
+				tone = blue
+			}
+			textAt(d.DC, metadata, meta, a.smallFont, tone, singleLine)
+			body := row
+			body.Top = meta.Bottom
+			body.Bottom -= int32(a.px(3))
+			textAt(d.DC, strings.Join(strings.Fields(m.Text), " "), body, a.font, ink, singleLine)
+			break
+		}
+		fill(d.DC, rect{row.Left, r.Bottom - 1, row.Right, r.Bottom}, railBG)
+	}
+	if d.State&0x10 != 0 {
 		user32.NewProc("DrawFocusRect").Call(d.DC, uintptr(unsafe.Pointer(&r)))
 	}
 }

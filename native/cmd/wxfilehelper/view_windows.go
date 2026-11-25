@@ -69,12 +69,10 @@ func (a *window) createChildren() error {
 			style = 0x40010000 | 0x0400 // fixed-width tabs
 		case idHistory, idQueue:
 			class = "LISTBOX"
-			style = 0x40210000 | 0x101 | 0x40
-			ex = 0x200 // notify, no integral height, strings
+			style = 0x40a10000 | 0x101 | 0x40 | 0x10 // border, notifications, fixed owner-drawn rows, accessible strings
 		case idEditor:
 			class = "EDIT"
-			style = 0x40210000 | 0x4 | 0x40 | 0x1000
-			ex = 0x200 // multiline, autovscroll, want return
+			style = 0x40a10000 | 0x4 | 0x40 | 0x1000 // border, multiline, autovscroll, want return
 		}
 		child, _, err := createWindow.Call(ex, uintptr(unsafe.Pointer(wide(class))), 0, style, 0, 0, 1, 1, a.h, uintptr(id), a.instance, 0)
 		if child == 0 {
@@ -86,24 +84,27 @@ func (a *window) createChildren() error {
 	return nil
 }
 func (a *window) freeFonts() {
-	for _, font := range []uintptr{a.font, a.brandFont, a.titleFont} {
+	for _, font := range []uintptr{a.font, a.smallFont, a.brandFont, a.titleFont} {
 		if font != 0 {
 			deleteObject.Call(font)
 		}
 	}
 }
 func (a *window) setFonts() {
-	old := []uintptr{a.font, a.brandFont, a.titleFont}
+	old := []uintptr{a.font, a.smallFont, a.brandFont, a.titleFont}
 	size := 15
 	if a.room {
 		size = 21
 	}
 	a.font = createFont(size, 400, a.dpi)
+	a.smallFont = createFont(size-2, 400, a.dpi)
 	a.brandFont = createFont(size+1, 600, a.dpi)
 	a.titleFont = createFont(size+8, 600, a.dpi)
 	for _, h := range a.children {
 		send.Call(h, 0x30, a.font, 1)
 	}
+	send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(size*3+4)))
+	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(size+11)))
 	for _, h := range old {
 		if h != 0 {
 			deleteObject.Call(h)

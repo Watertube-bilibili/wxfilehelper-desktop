@@ -43,7 +43,7 @@ const (
 type window struct {
 	h, instance, icon                                   uintptr
 	children                                            map[int]uintptr
-	font, titleFont, brandFont                          uintptr
+	font, smallFont, titleFont, brandFont               uintptr
 	c                                                   *desktop.Controller
 	snap                                                desktop.Snapshot
 	account                                             desktop.Account
@@ -277,7 +277,12 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 				return 0
 			}
 		case 0x2b:
-			a.drawButton((*drawItem)(unsafe.Pointer(l)))
+			item := (*drawItem)(unsafe.Pointer(l))
+			if item.ID == idHistory || item.ID == idQueue {
+				a.drawListRow(item)
+			} else {
+				a.drawButton(item)
+			}
 			return 1
 		case 0x233:
 			paths, err := droppedFiles(w)
