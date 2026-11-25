@@ -6,7 +6,7 @@ on:
     inputs:
       tag:
         description: Published Windows release tag
-        default: v1.2.2
+        default: v1.2.3
         required: true
 permissions:
   contents: read
