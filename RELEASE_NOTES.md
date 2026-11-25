@@ -1,17 +1,19 @@
-# 1.2.1 · Windows Fluent 界面更新 / Windows Fluent interface update
+# 1.2.2 · 手机附件与后台收件 / Phone attachments and background delivery
 
 ## 中文
 
-- 以浅色 Fluent 样式重做 Windows 界面，恢复经典侧栏。当前账号用蓝色指示条标记。
-- 收发消息分别靠左和靠右。文件消息突出文件名、大小和时间，并可选中后直接「另存为」。待发文件、输入框和发送按钮合在同一区域。
-- 小窗收起侧栏，保留标签与发送操作。教室大屏在空间足够时将文件队列放到输入框旁边，给聊天多留位置。
-- 安装版和单文件版保留 Go/Win32 架构，目标为 Windows 10 1507（内部版本 10240）及以上的 x64 系统。安装和启动已在现代 Windows 环境验证，1507 真机仍待验证。EXE 未签名。
+- 修复手机发送的 PPTX 等普通附件在消息正文为空或经过转义时可能被误判为“不支持”的问题。文件卡片读取微信提供的文件名、大小和下载信息。选中文件，点击「另存为」保存。
+- 关闭窗口后，已登录的账号继续在托盘运行。后台收到新附件时显示 Windows 系统通知，点击即可返回对应账号。托盘右键菜单可退出程序。
+- 安装器可选择创建桌面快捷方式，也可选择登录 Windows 时在后台启动。自动启动默认关闭，重启程序后仍需扫码。
+- 运行期间每 6 小时检查更新，自动检查失败后 15 分钟重试。教室大屏模式及其 F11 入口已移除。
+- 两个 EXE 均为 x64，兼容目标为 Windows 10 1507 及以上。附件回归使用模拟微信响应，校验收到的文件字节。此版本尚未在 1507 真机上完成手机账号端到端测试。
 
 ## English
 
-- Reworked the Windows app in a light Fluent style with the classic sidebar. A blue indicator identifies the active account.
-- Incoming and outgoing messages align to opposite sides. File messages emphasize the filename, size, and time. Select an attachment to save it. Queued files, the editor, and Send share a single composer.
-- Compact windows collapse the sidebar and retain tabs and sending controls. Classroom mode moves the queue beside the editor when the window is wide enough.
-- Both EXEs use the Go/Win32 architecture and target x64 Windows 10 version 1507 (build 10240) or later. Installation and startup were verified on current Windows. A live 1507 test is still pending. The EXEs are unsigned.
+- Fixed incoming presentations and other files being shown as unsupported when WeChat supplied attachment metadata outside the message body or escaped the XML. Select the named attachment and choose **Save as**.
+- Closing the window keeps signed-in accounts running in the notification area. Click a Windows notification for a new background attachment to open its account. Use the tray menu to quit.
+- Setup offers a desktop shortcut and optional background launch at Windows sign-in. Automatic startup is off by default. A fresh process requires QR authorization.
+- The app checks for updates every six hours and retries failed scheduled checks after 15 minutes. Classroom mode and its F11 shortcut have been removed.
+- Both EXEs target x64 Windows 10 version 1507 and later. Attachment tests use simulated service responses and compare the saved bytes. A live phone-to-PC transfer on a physical 1507 machine remains unverified.
 
-[免责声明 / Disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md) · [macOS](https://github.com/Watertube-bilibili/wxfilehelper-macos)
+[免责声明 / Disclaimer](https://github.com/Watertube-bilibili/wxfilehelper-desktop/blob/main/DISCLAIMER.md)

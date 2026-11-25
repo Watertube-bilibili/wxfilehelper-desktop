@@ -27,7 +27,7 @@ Offer a focused, fully open-source native file-transfer client.
 - Public GitHub repository; AGPL-3.0 license.
 - Windows installer EXE and one-file portable EXE; attempt macOS distribution.
 - Bilingual Chinese/English README and release notes.
-- Bilingual disclaimer. Automatic update checks. Fluent/UWP appearance and classroom display mode.
+- Bilingual disclaimer. Automatic update checks. Fluent/UWP appearance. On Windows, keep transfers running in the notification area and notify about incoming files.
 - Two independently authorized account tabs, each with its own background transfers and pending queue.
 - Support compact layouts and large displays with the same native controls.
 - Windows release first; macOS source and releases belong in a separate public repository.

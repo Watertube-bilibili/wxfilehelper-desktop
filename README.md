@@ -10,15 +10,17 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `WXFileHelper-1.2.1-Windows-x64-Portable.exe` | 单文件，双击运行 |
-| `WXFileHelper-1.2.1-Windows-x64-Setup.exe` | 当前用户安装，提供开始菜单和卸载入口 |
+| `WXFileHelper-1.2.2-Windows-x64-Portable.exe` | 单文件，双击运行 |
+| `WXFileHelper-1.2.2-Windows-x64-Setup.exe` | 当前用户安装，提供开始菜单和卸载入口 |
 | `SHA256SUMS.txt` | 核对两个 EXE 的 SHA-256 |
 
 - 兼容目标为 **Windows 10 1507（内部版本 10240）及以上的 x64 系统**。两个包都无需另装 Python、Qt 或 WebView2。
 - 用手机微信扫一扫，确认授权，再在当前标签发送文字或文件。点击 `+` 可添加第二个账号。两个标签各自保留消息和待发送文件。
 - 选择、拖入或粘贴文件，核对发送列表后点击「发送」。每批最多 100 个文件，每项 1 字节到 25 MiB。发送失败时未完成的文件仍可重试。
-- 选中收到的文件后「另存为」。大屏模式放大主要操作并隐藏昵称。更新检查显示可用版本，点击后可到 GitHub 获取安装包。
-- 1.2 安装版使用独立目录和开始菜单项。登录会话驻留内存，首次启动需要重新扫码。
+- 手机发送 PPTX、Word 文档、PDF 或其他普通附件后，可在会话中选中文件，点击「另存为」。如果微信只提供文件名，仍然会显示附件。
+- 关闭主窗口会收起到 Windows 通知区域，已登录的账号继续收件。后台收到附件时，点击系统通知可回到对应账号。要结束会话，右键托盘图标，选择「退出程序」。
+- 安装时可选择「创建桌面快捷方式」和「登录 Windows 时在后台启动」。自启动默认关闭。重启程序后需重新扫码。
+- 程序在启动时和运行期间每 6 小时检查 GitHub 更新，自动检查失败后 15 分钟重试。发现新版时，窗口内会出现发布页入口。
 
 ### 从源码构建
 
@@ -47,15 +49,17 @@ Version 1.2 uses a shared Go transfer core with Win32 on Windows and AppKit on m
 
 | Asset | Use |
 | --- | --- |
-| `WXFileHelper-1.2.1-Windows-x64-Portable.exe` | Single executable. Double-click to launch. |
-| `WXFileHelper-1.2.1-Windows-x64-Setup.exe` | Per-user installation with a Start menu and uninstaller. |
+| `WXFileHelper-1.2.2-Windows-x64-Portable.exe` | Single executable. Double-click to launch. |
+| `WXFileHelper-1.2.2-Windows-x64-Setup.exe` | Per-user installation with a Start menu and uninstaller. |
 | `SHA256SUMS.txt` | SHA-256 checksums for both executables. |
 
 - Targets **x64 Windows 10 version 1507 (build 10240) or later**. Both packages run without a Python, Qt, or WebView2 installation.
 - Scan with WeChat and approve sign-in. Select `+` to add a second independently authorized account. Each tab maintains its own messages and outgoing file queue.
 - Pick, drag, or paste files and review the queue before sending. A batch supports up to 100 files of 1 byte to 25 MiB each. Files that fail or remain unsent stay in the queue for retry.
-- Select an incoming attachment to save it. Classroom mode enlarges key controls and hides account names. Update checks link to the corresponding GitHub release.
-- The 1.2 installer uses its own directory and Start menu group. A fresh launch requires QR sign-in.
+- Select a presentation, document, PDF or other attachment from your phone and choose **Save as**. A file still appears by name if WeChat omits the download details.
+- Closing the window keeps signed-in accounts receiving files in the Windows notification area. Click a background file notification to open the corresponding account. Right-click the tray icon and choose **Quit WX FileHelper** to end the session.
+- Setup offers a desktop shortcut and optional launch in the background at Windows sign-in. Automatic startup is off by default. Scan again after restarting the app.
+- The app checks GitHub at startup and every six hours while running. Failed scheduled checks retry after 15 minutes. An available update appears in the window with a link to its release.
 
 ### Build from source
 
