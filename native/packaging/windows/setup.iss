@@ -59,7 +59,11 @@ Source: "go-license.txt"; DestDir: "{app}\licenses"
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\WXFileHelper.exe"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\{#LinkName}"; Filename: "{app}\WXFileHelper.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: ManageLink('{userdesktop}')
+Name: "{userdesktop}\{#LinkName}"; Filename: "{app}\WXFileHelper.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: ManageLink('{userdesktop}'); Flags: uninsneveruninstall
+
+[UninstallDelete]
+; A user can replace the shortcut after installation. Remove only ours.
+Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Check: ManageLink('{userdesktop}')
 
 [Registry]
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValue}"; ValueData: """{app}\WXFileHelper.exe"" --background"; Tasks: autostart; Flags: uninsdeletevalue
@@ -80,15 +84,18 @@ end;
 function ManageLink(const Folder: String): Boolean;
 var
   Filename: String;
-  Shell, Shortcut: Variant;
+  Shell, Directory, Item, Shortcut: Variant;
 begin
   Filename := ExpandConstant(Folder + '\{#LinkName}.lnk');
   Result := not FileExists(Filename);
   if Result then Exit;
   try
-    Shell := CreateOleObject('WScript.Shell');
-    Shortcut := Shell.CreateShortcut(Filename);
-    Result := CompareText(Shortcut.TargetPath, ExpandConstant('{app}\WXFileHelper.exe')) = 0;
+    { IShellLinkDual.Path preserves Unicode in install paths on every locale. }
+    Shell := CreateOleObject('Shell.Application');
+    Directory := Shell.NameSpace(ExtractFileDir(Filename));
+    Item := Directory.ParseName(ExtractFileName(Filename));
+    Shortcut := Item.GetLink;
+    Result := CompareText(Shortcut.Path, ExpandConstant('{app}\WXFileHelper.exe')) = 0;
   except
     Result := False;
   end;

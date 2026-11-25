@@ -1,15 +1,20 @@
 param(
     [Parameter(Mandatory = $true)][string]$Executable,
-    [switch]$VerifyShortcuts
+    [switch]$VerifyShortcuts,
+    [string]$PreviousInstaller
 )
 
 $ErrorActionPreference = "Stop"
 $package = (Resolve-Path -LiteralPath $Executable).Path
 $isInstaller = $package.EndsWith("-Setup.exe", [StringComparison]::OrdinalIgnoreCase)
 if ($VerifyShortcuts -and !$isInstaller) { throw "-VerifyShortcuts requires an installer" }
+if ($PreviousInstaller) {
+    if (!$VerifyShortcuts) { throw "-PreviousInstaller requires -VerifyShortcuts" }
+    $PreviousInstaller = (Resolve-Path -LiteralPath $PreviousInstaller).Path
+}
 $root = (New-Item -ItemType Directory -Force -Path (Join-Path $PSScriptRoot "../../build/windows")).FullName
 $sandbox = Join-Path $root ("smoke-" + [guid]::NewGuid().ToString("N"))
-$target = Join-Path $sandbox ("app " + [char]0x6D4B + [char]0x8BD5)
+$target = Join-Path $sandbox ("app " + [char]0x6D4B + [char]0x8BD5 + [char]::ConvertFromUtf32(0x1F4DA))
 $report = Join-Path $sandbox "result.txt"
 $previousReport = $env:WXFILEHELPER_SMOKE_REPORT
 $uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D2C9269-414D-46E2-8E62-A2C3DC74AACC}_is1"
@@ -43,9 +48,19 @@ function Assert-Link([string]$Path, [bool]$Expected, [string]$Arguments) {
     $exists = Test-Path -LiteralPath $Path
     if ($exists -ne $Expected) { throw "Unexpected shortcut state: $Path (exists=$exists, expected=$Expected)" }
     if (!$exists) { return }
-    $link = $shell.CreateShortcut($Path)
-    if ($link.TargetPath -ne $app -or $link.Arguments -cne $Arguments -or $link.WorkingDirectory -ne $target) {
-        throw "Unexpected shortcut at '$Path'. Target '$($link.TargetPath)' expected '$app'. Arguments '$($link.Arguments)' expected '$Arguments'. Working directory '$($link.WorkingDirectory)' expected '$target'."
+    # WScript.Shell can return ANSI/8.3 path text when a profile's code page
+    # cannot represent the target. Ask Explorer for the Unicode link instead.
+    $item = $shell.NameSpace((Split-Path -Parent $Path)).ParseName((Split-Path -Leaf $Path))
+    $link = $item.GetLink
+    if (!$link) { throw "Shell could not read desktop shortcut: $Path" }
+    $actualTarget = [string]$link.Path
+    $actualDir = [string]$link.WorkingDirectory
+    $actualArgs = [string]$link.Arguments
+    if ($actualTarget -ne $app -or $actualArgs -cne $Arguments -or $actualDir -ne $target) {
+        throw ("Incorrect desktop shortcut '$Path'." + [Environment]::NewLine +
+            "Target   expected=[$app] actual=[$actualTarget]" + [Environment]::NewLine +
+            "Work dir expected=[$target] actual=[$actualDir]" + [Environment]::NewLine +
+            "Args     expected=[$Arguments] actual=[$actualArgs]")
     }
 }
 
@@ -59,11 +74,11 @@ function Assert-TaskSelection([bool]$Desktop, [bool]$Autostart) {
     }
 }
 
-function Install-ForTest([string]$Step, [string]$TaskArgument) {
+function Install-ForTest([string]$Step, [string]$TaskArgument, [string]$Setup = $package) {
     $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/SP-', '/NORESTART', '/NOICONS',
         ('/DIR="' + $target + '"'), ('/LOG="' + (Join-Path $sandbox "$Step.log") + '"'))
     if ($TaskArgument) { $arguments += $TaskArgument }
-    Invoke-Setup $package $arguments
+    Invoke-Setup $Setup $arguments
 }
 
 if ($isInstaller -and (Test-Path -LiteralPath $uninstallKey)) {
@@ -77,7 +92,7 @@ if ($VerifyShortcuts) {
     if ((Test-Path -LiteralPath $desktopLink) -or ($null -ne $existingStartup)) {
         throw "An application shortcut or sign-in entry already exists. Test in a clean Windows profile."
     }
-    $shell = New-Object -ComObject WScript.Shell
+    $shell = New-Object -ComObject Shell.Application
 }
 New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
 try {
@@ -85,8 +100,19 @@ try {
     if ($isInstaller) {
         $app = Join-Path $target "WXFileHelper.exe"
         if ($VerifyShortcuts) {
-            Install-ForTest 'setup' ''
+            if ($PreviousInstaller) {
+                Install-ForTest 'previous-setup' '' $PreviousInstaller
+            } else {
+                Install-ForTest 'setup' ''
+            }
             Assert-TaskSelection $true $false
+            $shortcutReport = Join-Path $sandbox 'desktop-launch.txt'
+            $env:WXFILEHELPER_SMOKE_REPORT = $shortcutReport
+            Invoke-Hidden $desktopLink @('--smoke-test')
+            if (!(Test-Path -LiteralPath $shortcutReport) -or (Get-Content -LiteralPath $shortcutReport -Raw).Trim() -ne 'OK') {
+                throw "Desktop shortcut did not start the native app: $desktopLink"
+            }
+            Write-Output "Started the native app through the desktop shortcut"
             Install-ForTest 'startup-only' '/TASKS=autostart'
             Assert-TaskSelection $false $true
             Install-ForTest 'remember-tasks' ''
