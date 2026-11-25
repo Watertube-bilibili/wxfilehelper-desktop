@@ -6,7 +6,7 @@ on:
     inputs:
       tag:
         description: Published Windows release tag
-        default: v0.2.0-beta.3
+        default: v1.2.0
         required: true
 permissions:
   contents: read
@@ -37,5 +37,9 @@ jobs:
             Invoke-WebRequest "$base/$name" -OutFile $file
             $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
             if (($manifest -split '\r?\n') -cnotcontains "$digest  $name") { throw "Checksum mismatch for $name" }
-            ./scripts/smoke_windows.ps1 -Executable $file
+            if ($version -match '^0\.') {
+              ./scripts/smoke_windows.ps1 -Executable $file
+            } else {
+              ./native/packaging/windows/smoke.ps1 -Executable $file
+            }
           }
