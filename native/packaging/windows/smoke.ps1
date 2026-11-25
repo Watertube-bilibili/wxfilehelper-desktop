@@ -45,7 +45,7 @@ function Assert-Link([string]$Path, [bool]$Expected, [string]$Arguments) {
     if (!$exists) { return }
     $link = $shell.CreateShortcut($Path)
     if ($link.TargetPath -ne $app -or $link.Arguments -cne $Arguments -or $link.WorkingDirectory -ne $target) {
-        throw "Incorrect shortcut target, arguments, or working directory: $Path"
+        throw "Unexpected shortcut at '$Path'. Target '$($link.TargetPath)' expected '$app'. Arguments '$($link.Arguments)' expected '$Arguments'. Working directory '$($link.WorkingDirectory)' expected '$target'."
     }
 }
 
