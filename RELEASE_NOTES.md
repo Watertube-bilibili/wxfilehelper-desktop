@@ -1,7 +1,8 @@
-# 1.2.2 · 手机附件与后台收件 / Phone attachments and background delivery
+# 1.2.3 · 手机附件与安装器修复 / Phone attachments and installer fix
 
 ## 中文
 
+- 修复 Windows 显示语言与安装路径字符不匹配时，覆盖安装取消桌面快捷方式却保留旧图标的问题。已安装 1.2.2 的用户可直接覆盖安装。
 - 修复手机发送的 PPTX 等普通附件在消息正文为空或经过转义时可能被误判为“不支持”的问题。文件卡片读取微信提供的文件名、大小和下载信息。选中文件，点击「另存为」保存。
 - 关闭窗口后，已登录的账号继续在托盘运行。后台收到新附件时显示 Windows 系统通知，点击即可返回对应账号。托盘右键菜单可退出程序。
 - 安装器可选择创建桌面快捷方式，也可选择登录 Windows 时在后台启动。自动启动默认关闭，重启程序后仍需扫码。
@@ -10,6 +11,7 @@
 
 ## English
 
+- Fixed setup leaving an old desktop shortcut after an upgrade when the installation path contains characters outside the system code page. You can install this release over 1.2.2.
 - Fixed incoming presentations and other files being shown as unsupported when WeChat supplied attachment metadata outside the message body or escaped the XML. Select the named attachment and choose **Save as**.
 - Closing the window keeps signed-in accounts running in the notification area. Click a Windows notification for a new background attachment to open its account. Use the tray menu to quit.
 - Setup offers a desktop shortcut and optional background launch at Windows sign-in. Automatic startup is off by default. A fresh process requires QR authorization.
