@@ -81,6 +81,60 @@ function Install-ForTest([string]$Step, [string]$TaskArgument, [string]$Setup = 
     Invoke-Setup $Setup $arguments
 }
 
+function Uninstall-ForTest([string]$Step) {
+    $uninstaller = Join-Path $target 'unins000.exe'
+    if (Test-Path -LiteralPath $uninstaller) {
+        Invoke-Setup $uninstaller @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', ('/LOG="' + (Join-Path $sandbox "$Step.log") + '"'))
+        if ((Test-Path -LiteralPath $app) -or (Test-Path -LiteralPath $uninstallKey)) {
+            throw "Uninstall did not remove the test installation"
+        }
+    }
+}
+
+function Assert-ForeignShortcut([string]$Hash, [string]$Step) {
+    if (!(Test-Path -LiteralPath $desktopLink) -or (Get-FileHash -LiteralPath $desktopLink).Hash -ne $Hash) {
+        throw "The other application's shortcut was removed or changed during $Step"
+    }
+}
+
+function Test-ForeignShortcutOwnership {
+    # Create a known test link only after the clean-profile guard and regular
+    # uninstall. Its bytes must survive installation, upgrade, and uninstall.
+    $fixture = Join-Path $sandbox 'other-application.lnk'
+    $writer = New-Object -ComObject WScript.Shell
+    $sample = $writer.CreateShortcut($fixture)
+    $sample.TargetPath = Join-Path $env:SystemRoot 'System32\notepad.exe'
+    $sample.Save()
+    $hash = (Get-FileHash -LiteralPath $fixture).Hash
+    if (Test-Path -LiteralPath $desktopLink) { throw "Desktop path is already occupied" }
+    try {
+        Copy-Item -LiteralPath $fixture -Destination $desktopLink
+        Install-ForTest 'pre-existing-selected' '/TASKS=desktopicon'
+        Assert-ForeignShortcut $hash 'installation'
+        Install-ForTest 'pre-existing-deselected' '/TASKS=!desktopicon'
+        Assert-ForeignShortcut $hash 'task deselection'
+        Uninstall-ForTest 'pre-existing-uninstall'
+        Assert-ForeignShortcut $hash 'uninstall with a pre-existing link'
+        Remove-Item -LiteralPath $desktopLink
+
+        if ($PreviousInstaller) {
+            Install-ForTest 'older-uninstall-log' '/TASKS=desktopicon' $PreviousInstaller
+        }
+        Install-ForTest 'owned-shortcut' '/TASKS=desktopicon'
+        Assert-Link $desktopLink $true ''
+        Copy-Item -LiteralPath $fixture -Destination $desktopLink -Force
+        Uninstall-ForTest 'replaced-link-uninstall'
+        Assert-ForeignShortcut $hash 'uninstall after a user replaced the link'
+        Write-Output "Preserved pre-existing and later-replaced desktop shortcuts byte for byte"
+    }
+    finally {
+        Uninstall-ForTest 'foreign-link-cleanup'
+        if ((Test-Path -LiteralPath $desktopLink) -and (Get-FileHash -LiteralPath $desktopLink).Hash -eq $hash) {
+            Remove-Item -LiteralPath $desktopLink
+        }
+    }
+}
+
 if ($isInstaller -and (Test-Path -LiteralPath $uninstallKey)) {
     throw "A native 1.2 installation is already registered. Test the installer on a clean profile."
 }
@@ -139,14 +193,9 @@ try {
 finally {
     $env:WXFILEHELPER_SMOKE_REPORT = $previousReport
     if ($isInstaller) {
-        $uninstaller = Join-Path $target "unins000.exe"
-        if (Test-Path -LiteralPath $uninstaller) {
-            Invoke-Setup $uninstaller @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$sandbox\uninstall.log`"")
-            if ((Test-Path -LiteralPath (Join-Path $target "WXFileHelper.exe")) -or (Test-Path -LiteralPath $uninstallKey)) {
-                throw "Uninstall did not remove the test installation"
-            }
-            if ($VerifyShortcuts) { Assert-TaskSelection $false $false }
-            Write-Output "Native Windows uninstall succeeded"
-        }
+        Uninstall-ForTest 'uninstall'
+        if ($VerifyShortcuts) { Assert-TaskSelection $false $false }
+        Write-Output "Native Windows uninstall succeeded"
     }
 }
+if ($VerifyShortcuts) { Test-ForeignShortcutOwnership }

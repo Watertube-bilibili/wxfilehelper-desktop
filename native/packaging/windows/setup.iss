@@ -61,10 +61,6 @@ Name: "{group}\{#AppName}"; Filename: "{app}\WXFileHelper.exe"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\{#LinkName}"; Filename: "{app}\WXFileHelper.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: ManageLink('{userdesktop}'); Flags: uninsneveruninstall
 
-[UninstallDelete]
-; A user can replace the shortcut after installation. Remove only ours.
-Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Check: ManageLink('{userdesktop}')
-
 [Registry]
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValue}"; ValueData: """{app}\WXFileHelper.exe"" --background"; Tasks: autostart; Flags: uninsdeletevalue
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: none; ValueName: "{#RunValue}"; Tasks: not autostart; Flags: dontcreatekey deletevalue; Check: OwnStartupEntry
@@ -73,6 +69,9 @@ Root: HKCU; Subkey: "{#RunKey}"; ValueType: none; ValueName: "{#RunValue}"; Task
 Filename: "{app}\WXFileHelper.exe"; Description: "Launch / 启动 WX FileHelper Desktop"; Flags: nowait postinstall skipifsilent
 
 [Code]
+var
+  DesktopLink, SavedForeignLink: String;
+
 function OwnStartupEntry: Boolean;
 var
   Current: String;
@@ -100,4 +99,40 @@ begin
     Result := False;
   end;
   if not Result then Log('Preserving existing shortcut: ' + Filename);
+end;
+
+function InitializeUninstall: Boolean;
+begin
+  Result := True;
+  DesktopLink := ExpandConstant('{userdesktop}\{#LinkName}.lnk');
+  if FileExists(DesktopLink) and not ManageLink('{userdesktop}') then
+  begin
+    { Older releases appended unconditional shortcut deletions to the shared
+      uninstall log. Keep the user's link in the private temporary directory
+      in case one of those records is replayed. }
+    SavedForeignLink := ExpandConstant('{tmp}\user-desktop-link.backup');
+    if not CopyFile(DesktopLink, SavedForeignLink, True) then
+    begin
+      SuppressibleMsgBox('无法保留已有桌面快捷方式，卸载已停止。' + #13#10 +
+        'Uninstall stopped because it could not preserve your existing desktop shortcut.',
+        mbError, MB_OK, IDOK);
+      Result := False;
+    end;
+  end;
+end;
+
+procedure CurUninstallStepChanged(Step: TUninstallStep);
+begin
+  if Step = usUninstall then
+  begin
+    { Check at uninstall time. A declarative [UninstallDelete] check would be
+      evaluated at install time, before a user can replace their shortcut. }
+    if FileExists(DesktopLink) and ManageLink('{userdesktop}') then
+      DeleteFile(DesktopLink);
+  end
+  else if (Step = usPostUninstall) and (SavedForeignLink <> '') and not FileExists(DesktopLink) then
+  begin
+    if not CopyFile(SavedForeignLink, DesktopLink, True) then
+      RaiseException('无法恢复桌面快捷方式 / Could not restore the desktop shortcut');
+  end;
 end;
