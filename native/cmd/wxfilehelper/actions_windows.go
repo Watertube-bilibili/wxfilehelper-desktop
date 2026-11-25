@@ -42,10 +42,6 @@ func (a *window) reconcileDraft(v desktop.Account) {
 func (a *window) key(m message) bool {
 	state, _, _ := user32.NewProc("GetKeyState").Call(0x11)
 	ctrl := state&0x8000 != 0
-	if m.W == 0x7a || (m.W == 0x1b && a.room) {
-		a.toggleClassroom()
-		return true
-	}
 	if !ctrl {
 		return false
 	}
@@ -108,8 +104,8 @@ func (a *window) command(id int) {
 		if err == nil {
 			err = a.c.Start(next)
 		}
-	case idClass:
-		a.toggleClassroom()
+	case idExit:
+		a.requestExit()
 		return
 	case idMenu:
 		a.menu()
@@ -168,7 +164,7 @@ func (a *window) command(id int) {
 		}
 	case idSave:
 		m, ok := a.selectedMessage()
-		if !ok || !isAttachment(m) || m.Kind == "voice" {
+		if !ok || !m.CanDownload() {
 			return
 		}
 		var paths []string
@@ -202,8 +198,12 @@ func (a *window) openMessage() {
 	if !ok {
 		return
 	}
-	if isAttachment(m) && m.Kind != "voice" {
+	if m.CanDownload() {
 		a.command(idSave)
+		return
+	}
+	if isAttachment(m) {
+		dialog(a.h, m.Text+"\n\n"+a.tr("此附件当前没有可用的下载凭据，请在手机微信中查看。", "No download credentials are available for this attachment. Open it in WeChat on your phone."), a.tr("附件详情", "Attachment details"), 0x40)
 		return
 	}
 	dialog(a.h, m.Text, a.tr("消息内容", "Message text"), 0x40)
@@ -239,36 +239,14 @@ func (a *window) menu() {
 		separator()
 		add(idAbout, a.tr("关于", "About"), true)
 	}
+	separator()
+	add(idExit, a.tr("退出程序", "Quit WX FileHelper"), true)
 	var r rect
 	user32.NewProc("GetWindowRect").Call(a.children[idMenu], uintptr(unsafe.Pointer(&r)))
 	choice, _, _ := user32.NewProc("TrackPopupMenu").Call(menu, 0x100|0x8|0x2, uintptr(r.Right), uintptr(r.Bottom), 0, a.h, 0)
 	if choice != 0 {
 		a.command(int(choice))
 	}
-}
-func (a *window) toggleClassroom() {
-	// GWL_STYLE is a signed argument. ^uintptr(15) encodes -16 on x64.
-	if !a.room {
-		mon, _, _ := user32.NewProc("MonitorFromWindow").Call(a.h, 2)
-		mi := monitorInfo{}
-		mi.Size = uint32(unsafe.Sizeof(mi))
-		if ok, _, _ := user32.NewProc("GetMonitorInfoW").Call(mon, uintptr(unsafe.Pointer(&mi))); ok == 0 {
-			return
-		}
-		user32.NewProc("GetWindowRect").Call(a.h, uintptr(unsafe.Pointer(&a.savedRect)))
-		a.savedStyle, _, _ = user32.NewProc("GetWindowLongPtrW").Call(a.h, ^uintptr(15))
-		a.room = true
-		user32.NewProc("SetWindowLongPtrW").Call(a.h, ^uintptr(15), (a.savedStyle&^0xcf0000)|0x80000000)
-		r := mi.Monitor
-		user32.NewProc("SetWindowPos").Call(a.h, 0, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right-r.Left), uintptr(r.Bottom-r.Top), 0x34)
-	} else {
-		a.room = false
-		user32.NewProc("SetWindowLongPtrW").Call(a.h, ^uintptr(15), a.savedStyle)
-		r := a.savedRect
-		user32.NewProc("SetWindowPos").Call(a.h, 0, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right-r.Left), uintptr(r.Bottom-r.Top), 0x34)
-	}
-	a.setFonts()
-	a.refresh(true)
 }
 func (a *window) stateLabel() string {
 	ac := a.account

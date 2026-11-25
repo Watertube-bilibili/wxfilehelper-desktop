@@ -64,11 +64,11 @@ func (a *window) drawButton(d *drawItem) {
 	id := int(d.ID)
 	r := d.Bounds
 	rail := id == idChat || id == idFiles || id == idDownloads || id == idUpdate || id == idAbout
-	quiet := rail || id == idAdd || id == idMenu || id == idClass || id == idCopy || id == idSave || id == idRemoveFile
+	quiet := rail || id == idAdd || id == idMenu || id == idCopy || id == idSave || id == idRemoveFile
 	surface := base
 	if rail {
 		surface = railBG
-	} else if id == idAdd || id == idMenu || id == idClass || id == idRemoveFile {
+	} else if id == idAdd || id == idMenu || id == idRemoveFile {
 		surface = white
 	}
 	bg, fg, stroke := white, ink, border

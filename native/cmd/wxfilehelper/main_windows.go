@@ -16,7 +16,6 @@ import (
 const (
 	idTabs = 100 + iota
 	idAdd
-	idClass
 	idMenu
 	idChat
 	idFiles
@@ -38,6 +37,7 @@ const (
 	idSignout
 	idCloseTab
 	idToggleFilter
+	idExit
 )
 
 type window struct {
@@ -47,7 +47,7 @@ type window struct {
 	c                                                   *desktop.Controller
 	snap                                                desktop.Snapshot
 	account                                             desktop.Account
-	ready, english, room, rail, filesOnly, manualUpdate bool
+	ready, english, rail, filesOnly, manualUpdate       bool
 	drafts                                              map[uint64]string
 	pending                                             map[uint64]pendingDraft
 	epochs                                              map[uint64]uint64
@@ -61,8 +61,7 @@ type window struct {
 	labels                                              []caption
 	placements                                          map[int]rect
 	contentLeft, contentRight, contentTop               int
-	savedRect                                           rect
-	savedStyle                                          uintptr
+	tray                                                trayState
 	lastDir                                             string
 }
 
@@ -94,11 +93,23 @@ func main() {
 }
 
 func run(smoke bool) error {
-	return withWindow(func(a *window) error {
-		if smoke {
-			return a.smokeTest()
+	if smoke {
+		return withWindow((*window).smokeTest)
+	}
+	background := slices.Contains(os.Args[1:], "--background")
+	event, _, status := kernel32.NewProc("CreateEventW").Call(0, 0, 0, uintptr(unsafe.Pointer(wide(`Local\WXFileHelper.Native.Activate`))))
+	if event != 0 {
+		defer kernel32.NewProc("CloseHandle").Call(event)
+		if status == syscall.Errno(183) { // Another instance owns the activation event.
+			if !background {
+				kernel32.NewProc("SetEvent").Call(event)
+			}
+			return nil
 		}
-		return a.eventLoop()
+	}
+	return withWindow(func(a *window) error {
+		a.tray.activation = event
+		return a.eventLoop(background)
 	})
 }
 
@@ -157,10 +168,13 @@ func withWindow(use func(*window) error) error {
 	return use(ui)
 }
 
-func (a *window) eventLoop() error {
+func (a *window) eventLoop(background bool) error {
 	hwnd, c := a.h, a.c
-	showWindow.Call(hwnd, 5)
-	user32.NewProc("UpdateWindow").Call(hwnd)
+	hasTray := a.startTray()
+	if !background || !hasTray {
+		showWindow.Call(hwnd, 5)
+		user32.NewProc("UpdateWindow").Call(hwnd)
+	}
 	user32.NewProc("SetTimer").Call(hwnd, 1, 200, 0)
 	c.StartUpdateChecks()
 	a.fail(c.Start(a.snap.Active))
@@ -218,7 +232,14 @@ func (a *window) smokeTest() error {
 
 func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 	if a := ui; a != nil && a.ready {
+		if a.tray.taskbarCreated != 0 && msg == a.tray.taskbarCreated {
+			a.recreateTray()
+			return 0
+		}
 		switch msg {
+		case trayMessage:
+			a.trayCallback(w, l)
+			return 0
 		case 0x5:
 			if w != 1 {
 				a.layout()
@@ -249,7 +270,14 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			redraw(h)
 			return 0
 		case 0x113:
-			a.refreshHover()
+			if a.tray.activation != 0 {
+				if signal, _, _ := kernel32.NewProc("WaitForSingleObject").Call(a.tray.activation, 0); signal == 0 {
+					a.restoreWindow(0)
+				}
+			}
+			if visible, _, _ := user32.NewProc("IsWindowVisible").Call(h); visible != 0 {
+				a.refreshHover()
+			}
 			a.refresh(false)
 			return 0
 		case 0x133, 0x134: // WM_CTLCOLOREDIT / WM_CTLCOLORLISTBOX
@@ -315,12 +343,16 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			a.refresh(false)
 			return 0
 		case 0x10:
-			if a.confirmClose() {
+			a.hideToTray()
+			return 0
+		case 0x16: // WM_ENDSESSION (sign-out, shutdown or Restart Manager)
+			if w != 0 {
 				user32.NewProc("DestroyWindow").Call(h)
 			}
 			return 0
 		case 0x2:
 			a.ready = false
+			a.removeTrayIcons()
 			user32.NewProc("KillTimer").Call(h, 1)
 			a.freeFonts()
 			user32.NewProc("PostQuitMessage").Call(0)
@@ -344,7 +376,10 @@ func (a *window) fail(err error) {
 }
 func (a *window) confirmClose() bool {
 	for _, s := range a.snap.Accounts {
-		if s.Busy || len(s.Files) > 0 || strings.TrimSpace(a.drafts[s.ID]) != "" {
+		if s.Busy || s.Downloading || len(s.Files) > 0 || strings.TrimSpace(a.drafts[s.ID]) != "" {
+			if visible, _, _ := user32.NewProc("IsWindowVisible").Call(a.h); visible == 0 {
+				a.restoreWindow(0)
+			}
 			return dialog(a.h, a.tr("还有传输或未发送的内容。现在退出？", "You have a transfer or unsent items. Exit now?"), "WX FileHelper", 0x124) == 6
 		}
 	}

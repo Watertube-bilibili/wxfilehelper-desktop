@@ -55,11 +55,6 @@ type paintStruct struct {
 	Reserved           [32]byte
 }
 type minMaxInfo struct{ Reserved, MaxSize, MaxPosition, MinTrack, MaxTrack point }
-type monitorInfo struct {
-	Size          uint32
-	Monitor, Work rect
-	Flags         uint32
-}
 type drawItem struct {
 	Type, ID, Item, Action, State uint32
 	Window, DC                    uintptr

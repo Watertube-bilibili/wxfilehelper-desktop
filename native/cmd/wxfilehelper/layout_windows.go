@@ -39,14 +39,11 @@ func (a *window) layout() {
 	if h < 505 {
 		historyRow = 61
 	}
-	if a.room {
-		historyRow = 94
-	}
 	if a.historyRow != historyRow {
 		a.historyRow = historyRow
 		send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(historyRow)))
 	}
-	a.rail = w >= 880 && h >= 490 && !a.room
+	a.rail = w >= 880 && h >= 490
 	edge := 0
 	if a.rail {
 		edge = railWidth
@@ -58,7 +55,7 @@ func (a *window) layout() {
 
 	margin, btnH := 24, 36
 	y, titleH, tabsY, tabH := 16, 32, 81, 33
-	classW, menuW := 113, 38
+	menuW := 38
 	if w < 690 {
 		margin = 16
 	}
@@ -66,15 +63,10 @@ func (a *window) layout() {
 		y, titleH, tabsY, tabH = 8, 27, 62, 32
 		btnH = 30
 	}
-	if a.room {
-		margin, btnH = 32, 48
-		y, titleH, tabsY, tabH = 16, 40, 92, 44
-		classW, menuW = 185, 52
-	}
 	left, right := edge+margin, w-margin
 	put(idMenu, right-menuW, y+2, menuW, btnH)
-	put(idClass, right-menuW-classW-8, y+2, classW, btnH)
-	a.caption(a.tr("文件传输助手", "File Transfer"), left, y, right-left-classW-menuW-18, titleH, a.titleFont, ink, singleLine)
+
+	a.caption(a.tr("文件传输助手", "File Transfer"), left, y, right-left-menuW-12, titleH, a.titleFont, ink, singleLine)
 	statusInk := muted
 	if a.account.Error != "" {
 		statusInk = color(155, 45, 43)
@@ -91,9 +83,6 @@ func (a *window) layout() {
 	tabW := 144
 	if w < 690 {
 		tabW = 124
-	}
-	if a.room {
-		tabW = 180
 	}
 	n := len(a.snap.Accounts)
 	send.Call(a.children[idTabs], 0x1329, 0, uintptr(a.px(tabW))|(uintptr(a.px(tabH-4))<<16))
@@ -112,16 +101,13 @@ func (a *window) layout() {
 		put(idAbout, 12, h-53, railWidth-24, 36)
 	}
 	panelWidth := 1120
-	if a.room {
-		panelWidth = 1380
-	}
 	if width := right - left; width > panelWidth {
 		inset := (width - panelWidth) / 2
 		left, right = left+inset, right-inset
 	}
 	top := a.headerHeight + 12
 	if a.snap.Update != nil {
-		if h < 505 && !a.room {
+		if h < 505 {
 			put(idNotice, w-margin-154, tabsY, 154, tabH-2)
 		} else {
 			put(idNotice, left, top, min(360, right-left), btnH)
@@ -166,10 +152,6 @@ func (a *window) layoutLogin(put positionControl, left, right, top, btnH int) {
 	if width >= 665 && !compact {
 		gap := 36
 		size := min(284, a.hgt-top-72)
-		if a.room {
-			size = min(415, a.hgt-top-90)
-			gap = 56
-		}
 		cardWidth := size + 24
 		textWidth := min(330, width-cardWidth-gap-24)
 		x := left + (width-cardWidth-gap-textWidth)/2
@@ -186,9 +168,6 @@ func (a *window) layoutLogin(put positionControl, left, right, top, btnH int) {
 	center := (left + right) / 2
 	headingH, hintH := 34, 27
 	size := max(60, min(246, width-32, a.hgt-top-headingH-hintH-btnH-50))
-	if a.room {
-		size = min(370, max(64, a.hgt-top-headingH-hintH-btnH-51))
-	}
 	block := headingH + size + hintH + btnH + 34
 	y := top + max(0, (a.hgt-top-block)/2)
 	a.caption(heading, left, y, width, headingH, a.titleFont, ink, singleLine|1)
@@ -205,19 +184,10 @@ func (a *window) layoutTransfer(put positionControl, left, right, top, btnH int)
 	if a.hgt < 505 {
 		inset, gap = 10, 6
 	}
-	if a.room {
-		inset, gap = 20, 12
-	}
 	innerLeft, innerRight := left+inset, right-inset
 	bottom := a.hgt - 14
-	if a.room {
-		bottom -= 10
-	}
 	y := bottom - inset - btnH
 	sendW, fileW, stopW, saveW, copyW := 104, 124, 111, 100, 72
-	if a.room {
-		sendW, fileW, stopW, saveW, copyW = 148, 174, 159, 139, 88
-	}
 	put(idChoose, innerLeft, y, fileW, btnH)
 	put(idSend, innerRight-sendW, y, sendW, btnH)
 	if a.account.Busy {
@@ -227,40 +197,27 @@ func (a *window) layoutTransfer(put positionControl, left, right, top, btnH int)
 	if a.hgt < 505 {
 		editH = 31
 	}
-	if a.room {
-		editH = max(52, min(97, a.hgt/10))
-	}
 	editY := y - editH - gap
-	editorRight := innerRight
-	if a.room && width >= 1000 && len(a.account.Files) > 0 {
-		editorRight -= max(330, width/3) + 26
-	}
-	put(idEditor, innerLeft+1, editY, editorRight-innerLeft-2, editH)
+	put(idEditor, innerLeft+1, editY, innerRight-innerLeft-2, editH)
 	labelH := 24
 	if a.hgt < 505 {
 		labelH = 22
 	}
-	if a.room {
-		labelH = 31
-	}
 	labelY := editY - labelH
 	a.caption(a.tr("消息", "Message"), innerLeft, labelY, width/2, labelH, a.brandFont, ink, singleLine)
-	a.caption(a.tr("Ctrl+Enter 发送", "Ctrl+Enter to send"), innerLeft, labelY, editorRight-innerLeft-2, labelH, a.smallFont, muted, singleLine|2)
+	a.caption(a.tr("Ctrl+Enter 发送", "Ctrl+Enter to send"), innerLeft, labelY, innerRight-innerLeft-2, labelH, a.smallFont, muted, singleLine|2)
 	composerTop := labelY - 5
 	if n := len(a.account.Files); n > 0 {
-		queueH := a.queueRowHeight() * min(n, 2)
+		queueH := queueRowHeight * min(n, 2)
 		if a.hgt < 505 {
-			queueH = a.queueRowHeight()
+			queueH = queueRowHeight
 		}
-		listY, queueLeft := labelY-queueH-8, innerLeft
-		if editorRight != innerRight {
-			listY, queueLeft = y-gap-queueH, editorRight+24
-		}
-		a.queueSurface = a.box(queueLeft-2, listY-2, innerRight-queueLeft+4, queueH+4)
-		put(idQueue, queueLeft+1, listY, innerRight-queueLeft-2, queueH)
+		listY := labelY - queueH - 8
+		a.queueSurface = a.box(innerLeft-2, listY-2, innerRight-innerLeft+4, queueH+4)
+		put(idQueue, innerLeft+1, listY, innerRight-innerLeft-2, queueH)
 		barH := btnH - 4
 		barY := listY - barH - 5
-		a.caption(fmt.Sprintf(a.tr("待发送 · %d 项", "Queued · %d"), n), queueLeft, barY, innerRight-queueLeft-100, barH, a.smallFont, muted, singleLine)
+		a.caption(fmt.Sprintf(a.tr("待发送 · %d 项", "Queued · %d"), n), innerLeft, barY, innerRight-innerLeft-100, barH, a.smallFont, muted, singleLine)
 		put(idRemoveFile, innerRight-88, barY, 88, barH)
 		composerTop = min(composerTop, barY-5)
 	}

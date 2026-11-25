@@ -59,7 +59,7 @@ func (q *qrBitmap) load(data []byte) {
 	}
 }
 func (a *window) createChildren() error {
-	for _, id := range []int{idTabs, idAdd, idClass, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice} {
+	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice} {
 		class := "BUTTON"
 		style := uintptr(0x40010000 | 0x0000000b)
 		ex := uintptr(0) // WS_CHILD | WS_TABSTOP, owner drawn button
@@ -100,9 +100,6 @@ func (a *window) freeFonts() {
 func (a *window) setFonts() {
 	old := []uintptr{a.font, a.smallFont, a.brandFont, a.titleFont}
 	size := 15
-	if a.room {
-		size = 21
-	}
 	a.font = createFont(size, 400, a.dpi)
 	a.smallFont = createFont(size-2, 400, a.dpi)
 	a.brandFont = createFont(size+1, 600, a.dpi)
@@ -111,30 +108,24 @@ func (a *window) setFonts() {
 		send.Call(h, 0x30, a.font, 1)
 	}
 	send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(size*4+10)))
-	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(a.queueRowHeight())))
+	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(queueRowHeight)))
 	for _, h := range old {
 		if h != 0 {
 			deleteObject.Call(h)
 		}
 	}
 }
-func (a *window) queueRowHeight() int {
-	if a.room {
-		return 39
-	}
-	return 30
-}
+
+const queueRowHeight = 30
+
 func (a *window) changeLabels() {
 	for id, s := range map[int]string{
-		idAdd: a.tr("添加账号", "Add account"), idMenu: a.tr("更多操作", "More actions"), idClass: a.tr("教室大屏", "Classroom"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
+		idAdd: a.tr("添加账号", "Add account"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
 		idDownloads: a.tr("下载目录", "Downloads"), idUpdate: a.tr("检查更新", "Check updates"), idAbout: a.tr("关于", "About"),
 		idRefresh: a.tr("刷新二维码", "Refresh code"), idSave: a.tr("另存为…", "Save as…"), idCopy: a.tr("复制", "Copy"), idRemoveFile: a.tr("移除", "Remove"),
 		idChoose: a.tr("添加文件…", "Add files…"), idSend: a.tr("发送", "Send"), idStop: a.tr("停止队列", "Stop queue"),
 	} {
 		setText(a.children[id], s)
-	}
-	if a.room {
-		setText(a.children[idClass], a.tr("退出大屏", "Exit classroom"))
 	}
 	if a.snap.Update != nil {
 		setText(a.children[idNotice], a.tr("可更新至 ", "Update to ")+a.snap.Update.Version+"  ↗")
@@ -149,6 +140,7 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 	if !force && s.Revision == a.snap.Revision {
 		return
 	}
+	a.observeTransfers(s)
 	switched := s.Active != a.account.ID
 	a.snap = s
 	for _, v := range s.Accounts {
@@ -169,7 +161,7 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 	activeIndex := 0
 	for i, acct := range s.Accounts {
 		title := fmt.Sprintf(a.tr("账号 %d", "Account %d"), i+1)
-		if acct.Name != "" && !a.room {
+		if acct.Name != "" {
 			r := []rune(acct.Name)
 			if len(r) > 11 {
 				r = append(r[:10], '…')
@@ -307,7 +299,7 @@ func (a *window) enableActions() {
 	enabled(a.children[idRemoveFile], ready && int(i) >= 0)
 	m, ok := a.selectedMessage()
 	enabled(a.children[idCopy], ok)
-	enabled(a.children[idSave], ac.SignedIn && !ac.Downloading && ok && isAttachment(m) && m.Kind != "voice")
+	enabled(a.children[idSave], ac.SignedIn && !ac.Downloading && ok && m.CanDownload())
 	enabled(a.children[idStop], ac.Busy)
 	enabled(a.children[idRefresh], ac.Status != "connecting")
 }

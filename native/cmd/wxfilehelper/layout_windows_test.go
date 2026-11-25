@@ -18,7 +18,7 @@ func TestWindowsTransferLayouts(t *testing.T) {
 		s := a.c.Snapshot()
 		s.Accounts[0].SignedIn = true
 		s.Accounts[0].Status = "online"
-		s.Accounts[0].Messages = []wechat.Message{{ID: "attachment", Kind: "file", Text: "notes.pdf", Size: 4096}}
+		s.Accounts[0].Messages = []wechat.Message{{ID: "attachment", Kind: "file", MediaID: "test-media", Sender: "phone", Text: "slides.pptx", Size: 4096}}
 		s.Accounts[0].Files = []desktop.QueuedFile{{Name: "slides.pdf", Size: 65536}}
 		for _, size := range []struct {
 			w, h int
@@ -51,11 +51,9 @@ func TestWindowsTransferLayouts(t *testing.T) {
 		if m, ok := a.selectedMessage(); !ok || m.ID != "attachment" {
 			t.Fatal("file selection did not resolve to its message")
 		}
-		a.room = true
-		a.setFonts()
-		a.display(s, true)
-		if a.rail {
-			t.Fatal("sidebar visible in classroom mode")
+		a.enableActions()
+		if ok, _, _ := user32.NewProc("IsWindowEnabled").Call(a.children[idSave]); ok == 0 {
+			t.Fatal("Save as disabled for selected incoming PPTX")
 		}
 		return nil
 	})
