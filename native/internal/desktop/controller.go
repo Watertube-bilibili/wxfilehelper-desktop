@@ -16,7 +16,7 @@ import (
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/wechat"
 )
 
-const Version = "1.2.0"
+const Version = "1.2.1"
 
 const (
 	maxAccounts = 2
