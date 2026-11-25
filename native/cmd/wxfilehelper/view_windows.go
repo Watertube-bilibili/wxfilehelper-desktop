@@ -19,12 +19,12 @@ import (
 
 var (
 	base     = color(249, 251, 253)
-	railBG   = color(237, 242, 247)
-	border   = color(207, 217, 227)
-	ink      = color(30, 45, 62)
-	muted    = color(78, 97, 118)
-	blue     = color(0, 92, 165)
-	paleBlue = color(220, 236, 251)
+	railBG   = color(238, 243, 248)
+	border   = color(206, 217, 229)
+	ink      = color(31, 46, 65)
+	muted    = color(82, 101, 125)
+	blue     = color(0, 98, 174)
+	paleBlue = color(224, 239, 253)
 	white    = color(255, 255, 255)
 )
 
@@ -66,19 +66,26 @@ func (a *window) createChildren() error {
 		switch id {
 		case idTabs:
 			class = "SysTabControl32"
-			style = 0x40010000 | 0x0400 // fixed-width tabs
+			// Multiline mode suppresses the system up/down spinner. Our two fixed
+			// slots fit in one row. The native tab retains its full input behavior.
+			style = 0x40010000 | 0x0400 | 0x2000 | 0x200 | 0x800
 		case idHistory, idQueue:
 			class = "LISTBOX"
-			style = 0x40a10000 | 0x101 | 0x40 | 0x10 // border, notifications, fixed owner-drawn rows, accessible strings
+			style = 0x40210000 | 0x101 | 0x40 | 0x10 // notifications, fixed owner-drawn rows, accessible strings
 		case idEditor:
 			class = "EDIT"
-			style = 0x40a10000 | 0x4 | 0x40 | 0x1000 // border, multiline, autovscroll, want return
+			style = 0x40210000 | 0x4 | 0x40 | 0x1000 // multiline, autovscroll, want return
 		}
 		child, _, err := createWindow.Call(ex, uintptr(unsafe.Pointer(wide(class))), 0, style, 0, 0, 1, 1, a.h, uintptr(id), a.instance, 0)
 		if child == 0 {
 			return fmt.Errorf("%s (%d): %w", class, id, err)
 		}
 		a.children[id] = child
+		if id == idTabs {
+			if ok, _, err := comctl32.NewProc("SetWindowSubclass").Call(child, tabCallback, 1, 0); ok == 0 {
+				return fmt.Errorf("Initialize account tabs: %w", err)
+			}
+		}
 	}
 	send.Call(a.children[idEditor], 0x00c5, 1024*1024, 0)
 	return nil
@@ -103,17 +110,23 @@ func (a *window) setFonts() {
 	for _, h := range a.children {
 		send.Call(h, 0x30, a.font, 1)
 	}
-	send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(size*3+4)))
-	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(size+11)))
+	send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(size*4+10)))
+	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(a.queueRowHeight())))
 	for _, h := range old {
 		if h != 0 {
 			deleteObject.Call(h)
 		}
 	}
 }
+func (a *window) queueRowHeight() int {
+	if a.room {
+		return 39
+	}
+	return 30
+}
 func (a *window) changeLabels() {
 	for id, s := range map[int]string{
-		idAdd: "+", idMenu: "···", idClass: a.tr("教室大屏", "Classroom"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
+		idAdd: a.tr("添加账号", "Add account"), idMenu: a.tr("更多操作", "More actions"), idClass: a.tr("教室大屏", "Classroom"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
 		idDownloads: a.tr("下载目录", "Downloads"), idUpdate: a.tr("检查更新", "Check updates"), idAbout: a.tr("关于", "About"),
 		idRefresh: a.tr("刷新二维码", "Refresh code"), idSave: a.tr("另存为…", "Save as…"), idCopy: a.tr("复制", "Copy"), idRemoveFile: a.tr("移除", "Remove"),
 		idChoose: a.tr("添加文件…", "Add files…"), idSend: a.tr("发送", "Send"), idStop: a.tr("停止队列", "Stop queue"),
@@ -173,12 +186,12 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 	}
 	if !slices.Equal(titles, a.tabTexts) {
 		h := a.children[idTabs]
+		a.tabTexts = titles
 		send.Call(h, 0x1309, 0, 0)
 		for i, title := range titles {
 			item := tabItem{Mask: 1, Text: wide(title)}
 			send.Call(h, 0x133e, uintptr(i), uintptr(unsafe.Pointer(&item)))
 		}
-		a.tabTexts = titles
 	}
 	send.Call(a.children[idTabs], 0x130c, uintptr(activeIndex), 0)
 	var rows, ids []string

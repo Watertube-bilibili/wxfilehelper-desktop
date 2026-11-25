@@ -55,7 +55,9 @@ type window struct {
 	messageIDs                                          []string
 	dpi, w, hgt                                         int
 	qr                                                  qrBitmap
-	qrBounds                                            rect
+	qrBounds, qrCard, composer, queueSurface, statusDot rect
+	statusInk                                           uintptr
+	headerHeight, hot, historyRow                       int
 	labels                                              []caption
 	placements                                          map[int]rect
 	contentLeft, contentRight, contentTop               int
@@ -239,6 +241,7 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			return 0
 		case 0x2e0:
 			a.dpi = int(w & 0xffff)
+			a.historyRow = 0
 			r := (*rect)(unsafe.Pointer(l))
 			user32.NewProc("SetWindowPos").Call(h, 0, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right-r.Left), uintptr(r.Bottom-r.Top), 0x14)
 			a.setFonts()
@@ -246,13 +249,28 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			redraw(h)
 			return 0
 		case 0x113:
+			a.refreshHover()
 			a.refresh(false)
 			return 0
+		case 0x133, 0x134: // WM_CTLCOLOREDIT / WM_CTLCOLORLISTBOX
+			bg := white
+			if l == a.children[idHistory] || l == a.children[idQueue] {
+				bg = base
+			}
+			setTextColor.Call(w, ink)
+			gdi32.NewProc("SetBkColor").Call(w, bg)
+			gdi32.NewProc("SetDCBrushColor").Call(w, bg)
+			brush, _, _ := gdi32.NewProc("GetStockObject").Call(18) // DC_BRUSH takes the DC's brush color.
+			return brush
 		case 0x111:
 			id, code := int(w&0xffff), int((w>>16)&0xffff)
 			if id == idEditor && code == 0x300 {
 				a.drafts[a.snap.Active] = getText(a.children[idEditor])
 				a.enableActions()
+				return 0
+			}
+			if id == idEditor && (code == 0x100 || code == 0x200) {
+				invalidateRect.Call(h, uintptr(unsafe.Pointer(&a.composer)), 0)
 				return 0
 			}
 			if (id == idHistory || id == idQueue) && code == 1 {
@@ -278,9 +296,12 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			}
 		case 0x2b:
 			item := (*drawItem)(unsafe.Pointer(l))
-			if item.ID == idHistory || item.ID == idQueue {
+			switch item.ID {
+			case idHistory, idQueue:
 				a.drawListRow(item)
-			} else {
+			case idTabs:
+				a.drawTab(item)
+			default:
 				a.drawButton(item)
 			}
 			return 1
@@ -330,3 +351,28 @@ func (a *window) confirmClose() bool {
 	return true
 }
 func (a *window) switchTo(id uint64) { a.fail(a.c.SetActive(id)); a.refresh(false) }
+
+func (a *window) refreshHover() {
+	var cursor point
+	next := 0
+	if ok, _, _ := user32.NewProc("GetCursorPos").Call(uintptr(unsafe.Pointer(&cursor))); ok != 0 {
+		coords := uintptr(uint32(cursor.X)) | uintptr(uint32(cursor.Y))<<32
+		control, _, _ := user32.NewProc("WindowFromPoint").Call(coords)
+		for id, child := range a.children {
+			if control == child {
+				next = id
+				break
+			}
+		}
+	}
+	if next == a.hot {
+		return
+	}
+	old := a.hot
+	a.hot = next
+	for _, id := range []int{old, next} {
+		if control := a.children[id]; control != 0 {
+			redraw(control)
+		}
+	}
+}
