@@ -83,16 +83,11 @@ function Install-ForTest([string]$Step, [string]$TaskArgument, [string]$Setup = 
 }
 
 function Assert-LocalSend {
-    $component = Join-Path $target 'components/LocalSend/1.19.0'
-    $indexPath = Join-Path $PSScriptRoot '../../internal/localsendui/official-files.json'
-    $index = Get-Content -LiteralPath $indexPath -Raw | ConvertFrom-Json
-    foreach ($file in $index.PSObject.Properties) {
-        $path = Join-Path $component $file.Name
-        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $file.Value) {
-            throw "Incorrect LocalSend component file: $($file.Name)"
-        }
+    $zip = Join-Path $target 'components/LocalSend/LocalSend-1.19.0-windows-x86-64.zip'
+    if ((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ine '1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc') {
+        throw "Incorrect LocalSend offline package"
     }
-    Write-Output "Verified the installed official LocalSend component"
+    Write-Output "Verified the intact official LocalSend archive in the installed application"
 }
 
 function Uninstall-ForTest([string]$Step) {
