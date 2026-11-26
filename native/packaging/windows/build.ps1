@@ -70,10 +70,7 @@ try {
     if ($LocalSendArchive) {
         $official = (Resolve-Path -LiteralPath $LocalSendArchive).Path
         if ((Get-FileHash -LiteralPath $official).Hash -ine '1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc') { throw 'Official LocalSend 1.19.0 archive checksum mismatch' }
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        $component = Join-Path $scratch ('localsend-package-' + [guid]::NewGuid().ToString('N'))
-        [IO.Compression.ZipFile]::ExtractToDirectory($official,$component)
-        $compilerArgs += ('"/DLocalSendDir=' + $component + '"')
+        $compilerArgs += ('"/DLocalSendArchive=' + $official + '"')
     }
     $compilerArgs += 'setup.iss'
     $process = Start-Process -FilePath $Iscc -ArgumentList $compilerArgs `

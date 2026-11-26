@@ -26,7 +26,7 @@ Windows 使用会话时间线。左栏可查看会话记录、会话中的文件
 
 网页由 GitHub Pages 托管。免费 PeerJS 信令服务交换连接信息，Cloudflare STUN 用于发现可用的 UDP 地址。文件经 DTLS 加密，按 16 KiB 分块，通过有序可靠的 WebRTC 数据通道直达对方。两端对整份文件计算 SHA-256。网络封锁 UDP 或 NAT 无法穿透时会提示连接失败。单文件上限 8 GiB；不支持直接写入磁盘的浏览器最多接收 128 MiB。关闭页面会结束当前连接。
 
-微信登录码过期后会在原标签自动刷新。手机已扫码时，可继续在微信里确认。切换标签后，LocalSend 仍可传输。便携版如遇组件解压错误，请下载并解压官方 Windows x64 ZIP，在 LocalSend 标签点「选择已解压的原版」，选择其中的 `localsend_app.exe`。超级文件会在启动前逐个校验组件文件。[LocalSend 官方发布](https://github.com/localsend/localsend/releases/tag/v1.19.0)
+微信登录码过期后会在原标签自动刷新。手机已扫码时，可继续在微信里确认。切换标签后，LocalSend 仍可传输。安装版在 LocalSend 标签提供「载入离线组件」。如遇自动解压错误，请点「打开离线 ZIP」（便携版可点「下载官方 ZIP」），解压后点「选择已解压的原版」并选择其中的 `localsend_app.exe`。超级文件会在启动前逐个校验组件文件。[LocalSend 官方发布](https://github.com/localsend/localsend/releases/tag/v1.19.0)
 
 ### Windows 下载与使用
 
@@ -91,7 +91,7 @@ Choose **Remote UDP** in Ultra File LAN or open the [web app](https://watertube-
 
 GitHub Pages hosts the web UI. Free PeerJS signaling exchanges connection information and Cloudflare STUN discovers UDP addresses. Endpoints send ordered, reliable 16 KiB chunks over a DTLS-encrypted WebRTC data channel and verify the complete SHA-256. Blocked UDP or incompatible NAT can prevent a direct connection. The maximum file size is 8 GiB. Browsers without direct disk saving can receive up to 128 MiB. Closing the page ends the connection.
 
-WeChat refreshes expired QR codes in the same tab. After scanning, complete approval on your phone. LocalSend keeps transferring when you switch tabs. If automatic component extraction fails in the portable edition, extract the official Windows x64 ZIP, click **Choose extracted app** and select its `localsend_app.exe`. Ultra File verifies the component files before launch. [Official LocalSend release](https://github.com/localsend/localsend/releases/tag/v1.19.0)
+WeChat refreshes expired QR codes in the same tab. After scanning, complete approval on your phone. LocalSend keeps transferring when you switch tabs. Choose **Load offline component** after installation. If automatic extraction fails, choose **Open offline ZIP** (or **Download official ZIP** in the portable edition), extract the ZIP, then use **Choose extracted app** to select its `localsend_app.exe`. Ultra File verifies the component files before launch. [Official LocalSend release](https://github.com/localsend/localsend/releases/tag/v1.19.0)
 
 ### Download and use on Windows
 

@@ -4,6 +4,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/localsendui"
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/nearby"
 	"github.com/skip2/go-qrcode"
 	"os"
@@ -221,7 +222,8 @@ func (a *window) serviceCommand(id int) bool {
 			a.selectOfficial(paths[0])
 		}
 	case idGetZIP:
-		a.fail(openTarget(a.h, "https://github.com/localsend/localsend/releases/download/v1.19.0/LocalSend-1.19.0-windows-x86-64.zip"))
+		source, _ := localsendui.ArchiveSource()
+		a.fail(openTarget(a.h, source))
 	case idOfficial:
 		a.startOfficial()
 	case idServices:
