@@ -169,7 +169,7 @@ func (r release) hasPackage() bool {
 	for _, name := range expected {
 		found := false
 		for _, asset := range r.Assets {
-			if asset.Name == name && asset.State == "uploaded" {
+			if (asset.Name == name || asset.Name == strings.Replace(name, "WXFileHelper-", "UltraFile-", 1)) && asset.State == "uploaded" {
 				found = true
 				break
 			}

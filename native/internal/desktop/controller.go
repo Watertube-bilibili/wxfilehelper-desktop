@@ -16,7 +16,7 @@ import (
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/wechat"
 )
 
-const Version = "1.2.4"
+const Version = "2.0.0"
 
 const (
 	maxAccounts = 2
@@ -78,6 +78,7 @@ type account struct {
 }
 
 type Controller struct {
+	tabLimit        int
 	mu              sync.Mutex
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -98,10 +99,11 @@ var (
 	errBusy   = errors.New("正在发送，请稍候 / A transfer is in progress")
 )
 
-func New() *Controller {
+func New() *Controller { return NewWorkspace(maxAccounts) }
+func NewWorkspace(limit int) *Controller {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Controller{
-		ctx: ctx, cancel: cancel, updateStatus: "idle",
+		tabLimit: max(1, limit), ctx: ctx, cancel: cancel, updateStatus: "idle",
 		newClient: func() transferClient { return wechat.New() },
 	}
 	_, _ = c.AddAccount()
@@ -133,8 +135,8 @@ func (c *Controller) AddAccount() (uint64, error) {
 	if c.closed {
 		return 0, errClosed
 	}
-	if len(c.accounts) >= maxAccounts {
-		return 0, errors.New("最多同时打开两个账号 / Up to two account tabs are supported")
+	if len(c.accounts) >= c.tabLimit {
+		return 0, errors.New("已达到标签页上限 / Tab limit reached")
 	}
 	c.nextID++
 	c.active = c.nextID
