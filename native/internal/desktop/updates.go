@@ -124,7 +124,7 @@ func checkRelease(ctx context.Context) (*Update, error) {
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 2<<20)).Decode(&available); err != nil {
 		return nil, err
 	}
-	return newestRelease(available, repo), nil
+	return newestRelease(available, repo, Version), nil
 }
 
 var stableTag = regexp.MustCompile(`^v?([0-9]{1,4})\.([0-9]{1,4})\.([0-9]{1,4})$`)
@@ -142,8 +142,12 @@ func versionRank(tag string) int64 {
 	return rank
 }
 
-func newestRelease(available []release, repo string) *Update {
-	best := versionRank(Version)
+func newestRelease(available []release, repo, currentVersion string) *Update {
+	base, _, preview := strings.Cut(currentVersion, "-")
+	best := versionRank(base)
+	if preview {
+		best--
+	} // Offer the stable release of the same base version to preview users.
 	var update *Update
 	for _, r := range available {
 		url := "https://github.com/" + repo + "/releases/tag/" + r.Tag
