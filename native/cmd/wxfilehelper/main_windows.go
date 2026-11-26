@@ -38,6 +38,11 @@ const (
 	idCloseTab
 	idToggleFilter
 	idExit
+	idTransfers
+	idCover
+	idNavWeChat
+	idNavNearby
+	idNavLocal
 )
 
 type window struct {
@@ -55,6 +60,8 @@ type window struct {
 	epochs                                              map[uint64]uint64
 	historyRows, queueRows, tabTexts                    []string
 	messageIDs                                          []string
+	timeline                                            []timelineItem
+	coverImages                                         map[string]*qrBitmap
 	dpi, w, hgt                                         int
 	qr                                                  qrBitmap
 	qrBounds, qrCard, composer, queueSurface, statusDot rect
@@ -64,6 +71,9 @@ type window struct {
 	placements                                          map[int]rect
 	contentLeft, contentRight, contentTop               int
 	tray                                                trayState
+	tooltip                                             uintptr
+	tipStrings                                          map[int]*uint16
+	tipsEnglish                                         bool
 	lastDir                                             string
 }
 
@@ -148,8 +158,8 @@ func withWindow(use func(*window) error) error {
 	var work rect
 	user32.NewProc("SystemParametersInfoW").Call(48, 0, uintptr(unsafe.Pointer(&work)), 0)
 	systemDPI := getDPI(0)
-	w := min(1024*systemDPI/96, max(450, int(work.Right-work.Left)-20))
-	h := min(700*systemDPI/96, max(360, int(work.Bottom-work.Top)-20))
+	w := min(1100*systemDPI/96, max(450, int(work.Right-work.Left)-20))
+	h := min(740*systemDPI/96, max(360, int(work.Bottom-work.Top)-20))
 	hwnd, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(wide(ui.tr("超级文件", "Ultra File")))),
 		0x02cf0000, uintptr(int(work.Left)+(int(work.Right-work.Left)-w)/2), uintptr(int(work.Top)+(int(work.Bottom-work.Top)-h)/2), uintptr(w), uintptr(h), 0, 0, instance, 0)
 	if hwnd == 0 {
@@ -270,6 +280,7 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			r := (*rect)(unsafe.Pointer(l))
 			user32.NewProc("SetWindowPos").Call(h, 0, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right-r.Left), uintptr(r.Bottom-r.Top), 0x14)
 			a.setFonts()
+			a.sizeTimeline()
 			a.layout()
 			redraw(h)
 			return 0
@@ -299,6 +310,7 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			id, code := int(w&0xffff), int((w>>16)&0xffff)
 			if id == idEditor && code == 0x300 {
 				a.drafts[a.snap.Active] = getText(a.children[idEditor])
+				a.updateEditorScroll()
 				a.enableActions()
 				return 0
 			}
@@ -308,6 +320,10 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			}
 			if (id == idHistory || id == idQueue) && code == 1 {
 				a.enableActions()
+				if id == idHistory {
+					a.layout()
+					redraw(h)
+				}
 				return 0
 			}
 			if id == idHistory && code == 2 {
@@ -326,6 +342,15 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 					a.switchTo(a.snap.Accounts[idx].ID)
 				}
 				return 0
+			}
+		case 0x2c: // WM_MEASUREITEM for the variable-height native conversation list
+			item := (*struct {
+				Type, ID, Item, Width, Height uint32
+				Data                          uintptr
+			})(unsafe.Pointer(l))
+			if item.ID == idHistory {
+				item.Height = uint32(a.rowPixels(int(item.Item)))
+				return 1
 			}
 		case 0x2b:
 			item := (*drawItem)(unsafe.Pointer(l))

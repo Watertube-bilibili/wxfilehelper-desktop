@@ -3,11 +3,8 @@ package main
 
 import (
 	"strings"
-	"time"
 	"unicode"
 	"unsafe"
-
-	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/wechat"
 )
 
 // radius is in device pixels. An outline of zero omits the border.
@@ -35,6 +32,18 @@ func (a *window) glyph(dc uintptr, key string, x, y, side int32, tone uintptr) {
 	switch key {
 	case "document":
 		paths = [][]point{{{4, 2}, {12, 2}, {17, 7}, {17, 18}, {4, 18}, {4, 2}}, {{12, 2}, {12, 7}, {17, 7}}, {{7, 10}, {14, 10}}, {{7, 13}, {12, 13}}}
+	case "folder":
+		paths = [][]point{{{2, 5}, {8, 5}, {10, 7}, {18, 7}, {18, 17}, {2, 17}, {2, 5}}}
+	case "queue":
+		paths = [][]point{{{3, 4}, {5, 4}}, {{8, 4}, {17, 4}}, {{3, 10}, {5, 10}}, {{8, 10}, {17, 10}}, {{3, 16}, {5, 16}}, {{8, 16}, {17, 16}}}
+	case "monitor":
+		paths = [][]point{{{2, 3}, {18, 3}, {18, 14}, {2, 14}, {2, 3}}, {{10, 14}, {10, 17}}, {{5, 17}, {15, 17}}}
+	case "attach":
+		paths = [][]point{{{7, 13}, {14, 6}, {12, 4}, {5, 11}, {4, 14}, {6, 17}, {9, 17}, {18, 8}, {18, 5}, {15, 2}, {12, 2}, {3, 11}}}
+	case "send":
+		paths = [][]point{{{2, 3}, {18, 10}, {2, 17}, {5, 10}, {2, 3}}, {{5, 10}, {14, 10}}}
+	case "switch":
+		paths = [][]point{{{2, 6}, {17, 6}, {13, 2}}, {{18, 14}, {3, 14}, {7, 18}}}
 	case "chat":
 		paths = [][]point{{{2, 3}, {18, 3}, {18, 14}, {9, 14}, {5, 18}, {5, 14}, {2, 14}, {2, 3}}}
 	case "plus":
@@ -60,63 +69,67 @@ func (a *window) glyph(dc uintptr, key string, x, y, side int32, tone uintptr) {
 	deleteObject.Call(pen)
 }
 
+func navService(id int) int {
+	switch id {
+	case idNavWeChat:
+		return idWeChat
+	case idNavNearby:
+		return idNearby
+	case idNavLocal:
+		return idLocal
+	}
+	return 0
+}
+
 func (a *window) drawButton(d *drawItem) {
 	id := int(d.ID)
 	r := d.Bounds
-	rail := id == idChat || id == idFiles || id == idDownloads || id == idUpdate || id == idAbout
-	quiet := rail || id == idAdd || id == idMenu || id == idCopy || id == idSave || id == idRemoveFile
-	surface := base
+	kind := navService(id)
+	rail := kind != 0 || id == idChat || id == idFiles || id == idTransfers || id == idDownloads
+	bg, fg, stroke, surface := white, ink, border, base
 	if rail {
 		surface = railBG
-	} else if id == idAdd || id == idMenu || id == idRemoveFile {
-		surface = white
+		bg, stroke = surface, 0
 	}
-	bg, fg, stroke := white, ink, border
-	if quiet {
-		bg, fg, stroke = surface, muted, 0
+	if id == idAdd {
+		surface = tabBG
+		bg, stroke = surface, 0
 	}
-	active := id == idChat && !a.filesOnly || id == idFiles && a.filesOnly || id == idNotice
-	if active {
-		bg, fg, stroke = paleBlue, blue, 0
+	if id == idMenu || id == idCopy || id == idSave || id == idRemoveFile || id == idCover {
+		bg, stroke = surface, 0
 	}
-	primary := id == idSend || id == idRefresh
+	t := a.tab(a.snap.Active)
+	selected := !t.picker && t.kind == idWeChat && id == t.view
+	if selected || id == idNotice {
+		bg, fg, stroke = accentWash, accent, 0
+	}
+	primary := id == idSend || id == idRefresh || id == idHost || id == idNearSend || id == idAccept
 	if primary {
-		bg, fg, stroke = blue, white, 0
-	}
-	if a.hot == id && d.State&4 == 0 {
-		if primary {
-			bg = color(0, 85, 155)
-		} else {
-			bg = color(228, 237, 246)
-		}
-	}
-	if d.State&1 != 0 {
-		if primary {
-			bg = color(0, 72, 131)
-		} else {
-			bg = color(211, 225, 239)
-		}
+		bg, fg, stroke = accent, white, 0
 	}
 	if d.State&4 != 0 {
-		fg = color(109, 123, 139)
-		if quiet {
-			bg, stroke = surface, 0
+		fg = color(100, 114, 105)
+		if primary {
+			bg, stroke = color(230, 237, 230), border
+		}
+	} else if d.State&1 != 0 {
+		if primary {
+			bg = color(24, 78, 58)
 		} else {
-			bg, stroke = color(235, 240, 245), color(218, 226, 233)
+			bg = color(212, 228, 218)
+		}
+	} else if a.hot == id {
+		if primary {
+			bg = color(28, 89, 68)
+		} else {
+			bg = color(226, 236, 227)
 		}
 	}
 	if d.State&0x10 != 0 && d.State&0x200 == 0 {
-		stroke = blue
+		stroke = accent
 	}
 	fill(d.DC, r, surface)
-	roundedSurface(d.DC, r, a.px(6), bg, stroke)
-	if icon := a.services.logos[id]; icon != nil && len(icon.pixels) > 0 {
-		b := r
-		b.Left += int32(a.px(12))
-		b.Right = b.Left + (r.Bottom - r.Top)
-		icon.draw(d.DC, b, a.px(4))
-		r.Left = b.Right
-	}
+	roundedSurface(d.DC, r, a.px(7), bg, stroke)
 	side := int32(a.px(17))
 	cy := (r.Top + r.Bottom - side) / 2
 	if id == idAdd || id == idMenu {
@@ -129,20 +142,52 @@ func (a *window) drawButton(d *drawItem) {
 	}
 	flags := uintptr(singleLine | 1)
 	font := a.font
-	if rail {
-		flags = singleLine
-		r.Left += int32(a.px(12))
-		if id == idChat || id == idFiles {
-			key := "chat"
-			if id == idFiles {
-				key = "document"
-			}
-			a.glyph(d.DC, key, r.Left, cy, side, fg)
-			r.Left += side + int32(a.px(6))
-		}
-	}
-	if active || primary {
+	if selected || primary {
 		font = a.brandFont
+	}
+	// Icons for services are the same in the rail, picker and tabs.
+	logo := kind
+	if _, ok := serviceKeys[id]; ok {
+		logo = id
+	}
+	if logo != 0 {
+		side = int32(a.px(19))
+		x := r.Left + int32(a.px(11))
+		if rail && !a.rail {
+			x = (r.Left + r.Right - side) / 2
+		}
+		cy = (r.Top + r.Bottom - side) / 2
+		if icon := a.services.logos[logo]; icon != nil && len(icon.pixels) > 0 {
+			icon.draw(d.DC, rect{x, cy, x + side, cy + side}, 0)
+		}
+		if rail && !a.rail {
+			if kind == t.kind && !t.picker {
+				fill(d.DC, rect{r.Left, cy, r.Left + int32(a.px(2)), cy + side}, accent)
+			}
+			return
+		}
+		r.Left = x + side + int32(a.px(9))
+		flags = singleLine
+		if rail && kind == t.kind && !t.picker {
+			tag := r
+			tag.Right -= int32(a.px(8))
+			textAt(d.DC, a.tr("当前", "Active"), tag, a.smallFont, accent, singleLine|2)
+			r.Right -= int32(a.px(43))
+		}
+	} else {
+		key := map[int]string{idChat: "chat", idFiles: "folder", idTransfers: "queue", idDownloads: "folder", idChoose: "attach", idSend: "send", idServices: "switch"}[id]
+		if key != "" {
+			x := r.Left + int32(a.px(11))
+			if rail && !a.rail {
+				x = (r.Left + r.Right - side) / 2
+			}
+			a.glyph(d.DC, key, x, cy, side, fg)
+			if rail && !a.rail {
+				return
+			}
+			r.Left = x + side + int32(a.px(6))
+			flags = singleLine
+		}
 	}
 	textAt(d.DC, getText(d.Window), r, font, fg, flags)
 }
@@ -153,33 +198,36 @@ func (a *window) drawTab(d *drawItem) {
 		return
 	}
 	r := d.Bounds
-	fill(d.DC, r, white)
+	fill(d.DC, r, tabBG)
 	r.Left += int32(a.px(1))
 	r.Right -= int32(a.px(2))
 	r.Top += int32(a.px(1))
-	current := a.snap.Accounts[index].ID == a.snap.Active
-	bg, tone, stroke := color(240, 244, 248), muted, color(224, 231, 238)
+	ac := a.snap.Accounts[index]
+	tone := muted
+	current := ac.ID == a.snap.Active
+	if current || d.State&0x10 != 0 {
+		stroke := uintptr(0)
+		if d.State&0x10 != 0 {
+			stroke = accent
+		}
+		roundedSurface(d.DC, r, a.px(6), base, stroke)
+		tone = ink
+	}
 	if current {
-		bg, tone, stroke = base, blue, border
+		fill(d.DC, rect{r.Left, r.Bottom - int32(a.px(2)), r.Right, r.Bottom}, accent)
 	}
-	if d.State&0x10 != 0 && d.State&0x200 == 0 {
-		stroke = blue
+	side := int32(a.px(16))
+	x := r.Left + int32(a.px(9))
+	cy := (r.Top + r.Bottom - side) / 2
+	if icon := a.services.logos[a.tab(ac.ID).kind]; icon != nil && len(icon.pixels) > 0 {
+		icon.draw(d.DC, rect{x, cy, x + side, cy + side}, 0)
 	}
-	roundedSurface(d.DC, r, a.px(6), bg, stroke)
-	if current {
-		w := int32(a.px(26))
-		x := (r.Left + r.Right - w) / 2
-		h := int32(a.px(2))
-		fill(d.DC, rect{x, r.Bottom - h*2, x + w, r.Bottom - h}, blue)
-	}
-	title := ""
+	r.Left = x + side + int32(a.px(6))
+	r.Right -= int32(a.px(4))
+	r.Bottom -= int32(a.px(2))
 	if index < len(a.tabTexts) {
-		title = a.tabTexts[index]
+		textAt(d.DC, a.tabTexts[index], r, a.font, tone, singleLine)
 	}
-	r.Left += int32(a.px(7))
-	r.Right -= int32(a.px(7))
-	r.Bottom -= int32(a.px(3))
-	textAt(d.DC, title, r, a.font, tone, singleLine|1)
 }
 
 func shortPreview(s string) string {
@@ -221,14 +269,14 @@ func (a *window) drawListRow(d *drawItem) {
 	i := int(d.Item)
 	stroke := uintptr(0)
 	if d.State&1 != 0 || d.State&0x10 != 0 && d.State&0x200 == 0 {
-		stroke = blue
+		stroke = accent
 	}
 	if queue {
 		if i < 0 || i >= len(a.account.Files) {
 			return
 		}
 		if stroke != 0 {
-			roundedSurface(d.DC, r, a.px(5), paleBlue, stroke)
+			roundedSurface(d.DC, r, a.px(5), accentWash, stroke)
 		}
 		f := a.account.Files[i]
 		r.Left += int32(a.px(10))
@@ -242,66 +290,7 @@ func (a *window) drawListRow(d *drawItem) {
 		textAt(d.DC, fileSize(f.Size), r, a.smallFont, muted, singleLine|2)
 		return
 	}
-	if i < 0 || i >= len(a.messageIDs) {
-		return
-	}
-	for _, m := range a.account.Messages {
-		if m.ID == a.messageIDs[i] {
-			a.drawMessage(d.DC, r, m, stroke)
-			return
-		}
-	}
-}
-
-func (a *window) drawMessage(dc uintptr, r rect, m wechat.Message, stroke uintptr) {
-	author := a.tr("手机微信", "Phone")
-	tint := color(236, 242, 247)
-	if m.Outgoing {
-		author = a.tr("此电脑", "This PC")
-		tint = paleBlue
-	}
-	meta := author + " · " + time.Unix(m.Timestamp, 0).Format("15:04")
-	file := isAttachment(m)
-	body := shortPreview(m.Text)
-	font := a.font
-	if file {
-		font = a.brandFont
-		if m.Size > 0 {
-			meta += " · " + fileSize(m.Size)
-		}
-	}
-	pad := int32(a.px(13))
-	extra := int32(0)
-	if file {
-		extra = int32(a.px(33))
-	}
-	maxW := max(int32(a.px(64)), (r.Right-r.Left)*4/5)
-	w := min(maxW, max(int32(a.px(103)), max(textWidth(dc, meta, a.smallFont), textWidth(dc, body, font))+extra+pad*2))
-	left := r.Left + int32(a.px(2))
-	if m.Outgoing {
-		left = r.Right - int32(a.px(2)) - w
-	}
-	bubble := rect{left, r.Top + int32(a.px(4)), left + w, r.Bottom - int32(a.px(5))}
-	roundedSurface(dc, bubble, a.px(9), tint, stroke)
-	content := bubble
-	content.Left += pad
-	content.Right -= pad
-	if file {
-		side := int32(a.px(26))
-		a.glyph(dc, "document", content.Left, (content.Top+content.Bottom-side)/2, side, blue)
-		content.Left += extra
-	}
-	y := (content.Top + content.Bottom) / 2
-	upper, lower := content, content
-	upper.Top += int32(a.px(5))
-	upper.Bottom = y
-	lower.Top = y
-	lower.Bottom -= int32(a.px(5))
-	if file {
-		textAt(dc, body, upper, font, ink, singleLine)
-		textAt(dc, meta, lower, a.smallFont, muted, singleLine)
-	} else {
-		textAt(dc, meta, upper, a.smallFont, muted, singleLine)
-		textAt(dc, body, lower, font, ink, singleLine)
+	if i >= 0 && i < len(a.timeline) {
+		a.drawTimelineItem(d.DC, r, a.timeline[i], stroke)
 	}
 }

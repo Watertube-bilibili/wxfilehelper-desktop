@@ -19,7 +19,6 @@ const (
 	idWeChat
 	idNearby
 	idLocal
-	idQQ
 	idDefaultService
 	idHost
 	idPair
@@ -30,11 +29,12 @@ const (
 )
 const workspaceTabs = 4
 
-//go:embed icons/*.png
+//go:embed icons/ultra.png icons/localsend.png icons/wechat.png
 var icons embed.FS
 
 type serviceTab struct {
 	kind    int
+	view    int
 	picker  bool
 	servers map[int]*nearby.Server
 	pair    qrBitmap
@@ -61,7 +61,7 @@ func (a *window) initServices() {
 	a.services = serviceSpace{slots: map[uint64]*serviceTab{}, logos: map[int]*qrBitmap{}, defaultID: idWeChat, completed: make(chan completion, 32), done: make(chan struct{})}
 	if b, e := os.ReadFile(prefFile()); e == nil {
 		for id, name := range serviceKeys {
-			if string(b) == name && id != idQQ {
+			if string(b) == name {
 				a.services.defaultID = id
 			}
 		}
@@ -75,7 +75,7 @@ func (a *window) initServices() {
 	}
 }
 
-var serviceKeys = map[int]string{idWeChat: "wechat", idNearby: "ultra", idLocal: "localsend", idQQ: "qq"}
+var serviceKeys = map[int]string{idWeChat: "wechat", idNearby: "ultra", idLocal: "localsend"}
 
 func prefFile() string {
 	d, e := os.UserConfigDir()
@@ -87,7 +87,7 @@ func prefFile() string {
 func (a *window) tab(id uint64) *serviceTab {
 	p := a.services.slots[id]
 	if p == nil {
-		p = &serviceTab{kind: a.services.defaultID, servers: map[int]*nearby.Server{}}
+		p = &serviceTab{kind: a.services.defaultID, view: idChat, servers: map[int]*nearby.Server{}}
 		a.services.slots[id] = p
 	}
 	return p
@@ -98,8 +98,6 @@ func (a *window) titleOf(id int) string {
 		return a.tr("超级文件直传", "Ultra File LAN")
 	case idLocal:
 		return "LocalSend"
-	case idQQ:
-		return a.tr("QQ · 我的电脑", "QQ · My Computer")
 	}
 	return a.tr("微信文件传输助手", "WeChat File Transfer")
 }
@@ -128,26 +126,24 @@ func (a *window) serviceLayout(put positionControl, left, right, top, btn int) {
 	t := a.tab(a.snap.Active)
 	w := right - left
 	if t.picker {
-		for i, id := range []int{idWeChat, idNearby, idLocal, idQQ} {
+		for i, id := range []int{idWeChat, idNearby, idLocal} {
 			put(id, left, top+i*(btn+7), min(w, 460), btn)
 			setText(a.children[id], a.titleOf(id))
-			if id == idQQ {
-				setText(a.children[id], a.titleOf(id)+a.tr("  ·  尚无接入接口", "  ·  Unavailable"))
-			}
-			enabled(a.children[id], id != idQQ)
 		}
 		return
 	}
 	s := t.servers[t.kind]
-	heading := a.titleOf(t.kind)
-	a.caption(heading, left, top, w, 30, a.brandFont, ink, singleLine)
-	top += 34
-	put(idDefaultService, right-146, top-34, 146, btn)
-	setText(a.children[idDefaultService], a.tr("设为启动默认", "Use at startup"))
+	if t.kind != a.services.defaultID {
+		put(idDefaultService, right-146, top, 146, btn)
+		setText(a.children[idDefaultService], a.tr("设为启动默认", "Use at startup"))
+	}
 	if s == nil {
 		put(idHost, left, top, 196, btn)
 		setText(a.children[idHost], a.tr("启用局域网连接", "Enable LAN transfer"))
 		return
+	}
+	if t.kind != a.services.defaultID {
+		top += btn + 6
 	}
 	if t.kind == idNearby {
 		size := min(190, max(80, a.hgt-top-btn*2-36))
@@ -223,6 +219,32 @@ func (a *window) pollServices() {
 func (a *window) serviceCommand(id int) bool {
 	t := a.tab(a.snap.Active)
 	switch id {
+	case idNavWeChat, idNavNearby, idNavLocal:
+		kind := navService(id)
+		if kind != t.kind {
+			for _, ac := range a.snap.Accounts {
+				if other := a.tab(ac.ID); other.kind == kind {
+					other.picker = false
+					a.switchTo(ac.ID)
+					return true
+				}
+			}
+			if len(a.snap.Accounts) < workspaceTabs {
+				next, err := a.c.AddAccount()
+				if err != nil {
+					a.fail(err)
+					return true
+				}
+				t = a.tab(next)
+				t.kind = kind
+				a.startTab(next)
+			} else {
+				t.picker = true
+				a.refresh(true)
+				return true
+			}
+		}
+		t.picker = false
 	case idServices:
 		t.picker = !t.picker
 	case idWeChat, idNearby, idLocal:

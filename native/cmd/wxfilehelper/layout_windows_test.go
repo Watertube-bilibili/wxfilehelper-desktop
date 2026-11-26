@@ -16,6 +16,7 @@ func TestWindowsTransferLayouts(t *testing.T) {
 	defer runtime.UnlockOSThread()
 	err := withWindow(func(a *window) error {
 		s := a.c.Snapshot()
+		a.tab(s.Active).kind = idWeChat
 		s.Accounts[0].SignedIn = true
 		s.Accounts[0].Status = "online"
 		s.Accounts[0].Messages = []wechat.Message{{ID: "attachment", Kind: "file", MediaID: "test-media", Sender: "phone", Text: "slides.pptx", Size: 4096}}
@@ -54,6 +55,33 @@ func TestWindowsTransferLayouts(t *testing.T) {
 		a.enableActions()
 		if ok, _, _ := user32.NewProc("IsWindowEnabled").Call(a.children[idSave]); ok == 0 {
 			t.Fatal("Save as disabled for selected incoming PPTX")
+		}
+		a.layout()
+		if _, ok := a.placements[idCover]; !ok {
+			t.Fatal("no on-demand preview action for the incoming PPTX")
+		}
+		a.tab(s.Active).view = idTransfers
+		a.display(s, true)
+		if _, ok := a.placements[idHistory]; ok {
+			t.Fatal("history overlaps the queue view")
+		}
+		if _, ok := a.placements[idQueue]; !ok {
+			t.Fatal("selected tab lost its queued attachments")
+		}
+		a.tab(s.Active).view = idFiles
+		s.Accounts[0].Messages = append(s.Accounts[0].Messages, wechat.Message{ID: "text", Kind: "text", Text: "draft comparison"})
+		a.display(s, true)
+		if len(a.timeline) != 1 || a.timeline[0].message.ID != "attachment" {
+			t.Fatal("file inbox should filter text")
+		}
+		a.command(idNavLocal)
+		tabID := a.c.Snapshot().Active
+		if tabID == s.Active || a.tab(tabID).kind != idLocal || a.tab(s.Active).view != idFiles {
+			t.Fatal("navigating to LocalSend lost the original tab or its view")
+		}
+		a.command(idNavWeChat)
+		if a.c.Snapshot().Active != s.Active || len(a.c.Snapshot().Accounts) != 2 {
+			t.Fatal("sidebar did not reuse the open WeChat tab")
 		}
 		return nil
 	})

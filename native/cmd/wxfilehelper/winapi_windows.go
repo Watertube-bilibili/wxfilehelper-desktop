@@ -108,8 +108,8 @@ func textAt(dc uintptr, s string, r rect, font, ink, flags uintptr) {
 	drawText.Call(dc, uintptr(unsafe.Pointer(wide(s))), ^uintptr(0), uintptr(unsafe.Pointer(&r)), flags|0x800) // DT_NOPREFIX
 	selectObject.Call(dc, old)
 }
-func createFont(size, weight int, dpi int) uintptr {
-	h, _, _ := gdi32.NewProc("CreateFontW").Call(uintptr(-size*dpi/96), 0, 0, 0, uintptr(weight), 0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wide("Segoe UI"))))
+func createFont(size, weight int, dpi int, face string) uintptr {
+	h, _, _ := gdi32.NewProc("CreateFontW").Call(uintptr(-size*dpi/96), 0, 0, 0, uintptr(weight), 0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wide(face))))
 	return h
 }
 func getDPI(h uintptr) int {
