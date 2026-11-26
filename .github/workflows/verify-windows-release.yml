@@ -33,7 +33,8 @@ jobs:
           if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
           foreach ($type in 'Portable','Setup') {
             $baseVersion = ($version -split '-')[0]
-            $name = if ([version]$baseVersion -ge [version]'2.0.0') { "UltraFile-$baseVersion-Windows-x64-$type.exe" } else { "WXFileHelper-$version-Windows-x64-$type.exe" }
+            $name = if ([version]$baseVersion -ge [version]'2.0.0') { "UltraFile-$version-Windows-x64-$type.exe" } else { "WXFileHelper-$version-Windows-x64-$type.exe" }
+            if ($env:RELEASE_TAG -eq 'v2.0.0-beta.1') { $name = "UltraFile-$baseVersion-Windows-x64-$type.exe" }
             $file = Join-Path $env:RUNNER_TEMP $name
             Invoke-WebRequest "$base/$name" -OutFile $file
             $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
