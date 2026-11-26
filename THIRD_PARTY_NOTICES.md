@@ -56,3 +56,7 @@ This project does not bundle Qt WebEngine or Chromium.
 
 Dependency license files extracted from installed distributions are included under
 `licenses/dependencies/` in release builds. / 发行包在该目录附带依赖包的许可文件。
+
+## Ultra File 2.0
+
+二维码编码使用 [go-qrcode / BSD](licenses/go-qrcode-BSD.txt)。Android QR decoding uses [ZXing core 3.5.3 / Apache-2.0](android/NOTICE.txt). Service identification artwork is from [WeChat](https://filehelper.weixin.qq.com/), [QQ](https://im.qq.com/) and [LocalSend](https://localsend.org/). 服务标识属于各自权利人。
