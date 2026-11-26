@@ -20,6 +20,10 @@
 6. **No warranty; limitation of liability.** The software is provided “as is,” without warranties of merchantability, fitness for a particular purpose, continuous availability, or absence of errors, to the extent permitted by law. Liability limitations are governed by sections 15–17 of AGPL-3.0 and applicable law. This notice does not exclude liabilities that cannot legally be excluded or reduce rights granted by the open-source license.
 7. **Keep backups.** Back up important files and verify transfer results. Coverage varies across accounts, networks and devices. Current binaries are unsigned by a commercial code-signing certificate.
 
-局域网配对码含访问密钥，只与预期接收者分享。接收文件和用户设置会保存在本机。LocalSend、QQ 和微信标识属于各自权利人。
+局域网配对码含访问密钥，只与预期接收者分享。接收文件和用户设置会保存在本机。LocalSend 和微信标识属于各自权利人。
 
-LAN pairing codes carry a session credential. Share them only with the intended recipient. Received files and preferences are saved locally. LocalSend, QQ and WeChat marks belong to their respective owners.
+LAN pairing codes carry a session credential. Share them only with the intended recipient. Received files and preferences are saved locally. LocalSend and WeChat marks belong to their respective owners.
+
+远程直传依赖 PeerJS 公共信令及 Cloudflare STUN，两者可能处理 IP 和连接元数据。配对码仅与预期接收方共享。传输需要网络允许 UDP。LocalSend 原版组件使用自己的设置、接收目录和隐私策略。
+
+Remote transfer uses public PeerJS signaling and Cloudflare STUN, which may process IP addresses and connection metadata. Share pairing codes with the intended receiver. Remote transfer requires a working UDP path. The optional official LocalSend component maintains its own settings and download location.

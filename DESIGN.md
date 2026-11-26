@@ -1,12 +1,9 @@
-# Windows desktop design
+# Windows conversation layout
 
-Mode: operate. The user chose a light Fluent desktop utility with the classic navigation sidebar. The first task is to transfer a file to the user's own phone or save an incoming attachment. Version 1.2 uses the operating system's Win32 controls on the original Go architecture.
+The Windows client uses a light, native Win32 workspace. In the WeChat conversation, incoming messages align left, outgoing messages align right and a date introduces each day. A filename, type and size identify each attachment. Presentations may show their embedded cover. The composer keeps the draft above the attachment and send buttons.
 
-- Structure: a 196-DIP navigation rail on regular windows, a white title and account strip, and a flexible conversation canvas. Below 880 DIPs, secondary destinations move into the More actions menu. Account tabs and attachment actions remain reachable.
-- Palette: cool off-white canvas `#F9FBFD`, white input and header, mist-blue rail `#EDF2F7`, ink `#1E2D3E`, muted ink `#4E6176`, Fluent action blue `#005CA5`, and powder-blue outgoing messages `#DCECFB`. Blue identifies the current account, selection and the primary action. Success, pending and failures have labels as well as color.
-- Typography: Segoe UI and the system CJK fallback. Standard body uses 15 DIPs, metadata 13, and headings 23. Line icons are drawn in GDI beside labels where they help scanning. The original project icon identifies the app.
-- The selected account uses a short blue indicator. Account names have limited visual width and the underlying tab remains a native keyboard and accessibility control.
-- Incoming messages align left on a cool neutral fill; outgoing messages align right in powder blue. Attachments lead with the filename and expose source, time and size below it. The selected attachment can be saved with a native dialog. Long content still has its full accessible label and can be opened or copied.
-- Keep the queue together with the editor and Send. Pending files retain their name and size after a failed transfer. Use a thin outline to group the composer and show keyboard focus.
-- Sign-in uses a high-contrast, white-backed QR code and one recovery action. A smaller window stacks the sign-in steps vertically.
-- Use the system title bar, native context menus, focus conventions, and open/save dialogs. Login, connectivity, transfer progress and update states reflect the session controller.
+A 196-DIP sidebar contains the current conversation’s views and the available services. Windows narrower than 880 DIPs or shorter than 490 DIPs use a 52-DIP icon sidebar with native tooltips. The tab strip sits above the service title and connection status. Each tab retains its own service, view and draft.
+
+The canvas uses #FCFDF9, the rail #F2F5EF and the tab strip #EFF2EC. Text uses #24312E. The primary action and selection use #256953, with #E7F1E9 behind outgoing messages. File type and transfer state have text labels.
+
+Chinese uses Microsoft YaHei UI and English uses Segoe UI with system font fallback. The editor, account tabs, conversation list, file dialogs and menus use native input and keyboard behavior. QR codes retain a white margin and scale with the window and display DPI.

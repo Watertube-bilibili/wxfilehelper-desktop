@@ -1,4 +1,18 @@
-# 超级文件 2.0.0 预览版 · Ultra File 2.0.0 preview
+# 超级文件 2.0.0-beta.3 · Ultra File for Windows
+
+「超级文件直传」新增远程 UDP 收发和 GitHub Pages 网页版。输入 12 位配对码、选择文件、由接收方确认后开始。LocalSend 标签可加载官方 1.19.0 客户端。蓝色图标的箭头已对齐，并为高 DPI 和小尺寸重新绘制。标签指示条、侧栏与按钮过渡可随时打断，遵循 Windows 动画设置。微信登录码过期后自动刷新。
+
+Ultra File adds remote UDP transfers between Windows and web browsers. Share a 12-character pairing code and accept the file on the receiving device. LocalSend now opens its original 1.19.0 Windows client inside the tab. The aligned arrow and multi-resolution icons stay sharp at different DPI settings. Tab, sidebar and hover transitions can reverse in flight and respect the Windows animation setting. Expired WeChat QR codes refresh automatically.
+
+Windows 原生窗口采用「会话收发」布局。经典侧栏集中显示会话记录、文件收件箱、传输队列和三项服务。窄窗口使用带提示的图标侧栏。微信消息按日期分组，手机收件靠左，电脑发件靠右。
+
+选中附件可另存为。选中可下载且已知大小不超过 25 MiB 的 PPTX 后，可点「预览封面」。发送或保存演示文稿时也会读取其内嵌缩略图。未包含缩略图的文件使用普通附件卡片。Ctrl+Enter 可发送当前标签的文字与待发送文件。
+
+The native Windows app now uses a conversation layout. Its sidebar opens conversations, files, the send queue and three transfer services. Compact windows use icon buttons with tooltips. The timeline groups messages by date and aligns phone and PC activity on opposite sides.
+
+Select an attachment to save it. Choose **Preview cover** on a downloadable PPTX with a known size up to 25 MiB to read its embedded thumbnail. Sending or saving a presentation also reads its cover when available. Files without an embedded thumbnail keep a regular attachment card. Ctrl+Enter sends this tab’s draft and queued files.
+
+## 超级文件 2.0.0 预览版 · Ultra File 2.0.0 preview
 
 每个标签右上角可「切换服务」。最多四个标签可以同时运行。更多菜单里的「当前服务设为启动默认」会保存到当前 Windows 用户。
 
@@ -7,7 +21,6 @@
 | 微信文件传输助手 | 用微信扫码，在当前标签内收发。 |
 | 超级文件直传 | 手机和电脑连接同一局域网。在电脑上启用直传，再用安卓客户端扫码。手机可以选择文件发送。反向传输时先在电脑选择文件，再在手机点「接收电脑上的文件」并选择保存位置。 |
 | LocalSend | 启用连接后，在本标签接受收件。发送时输入对方局域网 IPv4，核对证书指纹，由对方接受。 |
-| 手机 QQ「我的电脑／传输到电脑」 | 暂未找到允许第三方作为个人电脑端收发的公开接口，入口暂不可用。 |
 
 直传以 4 MiB 分块，通过两路连接交错传输，失败的块最多重试两次，完成后校验整份文件的 SHA-256。单文件上限 8 GiB。配对码含当前会话的密钥，接收者可以下载当前共享文件并上传文件。电脑收件在下载目录的 Ultra File 子目录。关闭连接所在的标签或退出程序会终止配对。
 
@@ -18,7 +31,6 @@ Use **Services** at the top of a tab. Run up to four tabs concurrently and use t
 | WeChat File Transfer | Scan with WeChat and use the tab's conversation. |
 | Ultra File LAN | Join the same LAN, enable the desktop listener and scan its QR in the Android companion. Pick a file on Android to upload. To download, first share a file on the PC, then choose Receive and a destination on the phone. |
 | LocalSend | Accept incoming HTTPS transfers in the tab. To send, enter the receiver’s LAN IPv4, confirm its certificate fingerprint and wait for approval. |
-| Mobile QQ – My Computer | Currently unavailable. We have not identified a public API for registering a third-party app as the user's personal computer. |
 
 Two lanes carry alternating 4 MiB chunks, retry failures up to twice, and verify the final SHA-256. Each file can be up to 8 GiB. Pairing credentials allow the holder to upload and download the shared file. Windows saves incoming LAN files under Downloads/Ultra File. Closing the associated tab or quitting ends pairing.
 

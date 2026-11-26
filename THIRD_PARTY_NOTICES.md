@@ -59,4 +59,12 @@ Dependency license files extracted from installed distributions are included und
 
 ## Ultra File 2.0
 
-二维码编码使用 [go-qrcode / BSD](licenses/go-qrcode-BSD.txt)。Android QR decoding uses [ZXing core 3.5.3 / Apache-2.0](android/NOTICE.txt). Service identification artwork is from [WeChat](https://filehelper.weixin.qq.com/), [QQ](https://im.qq.com/) and [LocalSend](https://localsend.org/). 服务标识属于各自权利人。
+二维码编码使用 [go-qrcode / BSD](licenses/go-qrcode-BSD.txt)。Android QR decoding uses [ZXing core 3.5.3 / Apache-2.0](android/NOTICE.txt). Service identification artwork is from [WeChat](https://filehelper.weixin.qq.com/) and [LocalSend](https://localsend.org/). 服务标识属于各自权利人。
+
+## 原版 LocalSend 与远程传输 · LocalSend and remote transfers
+
+LocalSend 1.19.0 以独立、未经修改的官方 Windows 便携包按需获取。程序先核对固定的 SHA-256，再启动原版客户端。其源代码按 Apache-2.0 提供，官方包附带 Flutter 及依赖声明。The optional upstream portable component runs in its own process. Its source and license accompany the official release. [Source and license](https://github.com/localsend/localsend/tree/v1.19.0)
+
+远程传输使用 Pion WebRTC、coder/websocket 及其 Go 依赖。The Windows distribution includes their copyright and license texts. [Native licenses](licenses/native-network-LICENSES.txt)
+
+The web client includes js-sha256 0.11.1 under MIT. 网页使用该库流式校验文件。 [License](docs/LICENSE-sha256.txt)
