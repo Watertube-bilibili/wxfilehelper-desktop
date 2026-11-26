@@ -2,6 +2,7 @@ param(
     [string]$Go = "",
     [string]$Iscc = "",
     [string]$Upx = "",
+    [string]$LocalSendArchive = "",
     [switch]$Verify
 )
 
@@ -65,7 +66,17 @@ try {
     $goRoot = (& $Go env GOROOT).Trim()
     if ($LASTEXITCODE -ne 0 -or !$goRoot) { throw "Could not find the Go license" }
     Copy-Item -LiteralPath (Join-Path $goRoot "LICENSE") -Destination (Join-Path $PSScriptRoot "go-license.txt") -Force
-    $process = Start-Process -FilePath $Iscc -ArgumentList @("/DAppVersion=$version", "/DAppHash=$((Get-FileHash $portable).Hash)", "setup.iss") `
+    $compilerArgs = @("/DAppVersion=$version", "/DAppHash=$((Get-FileHash $portable).Hash)")
+    if ($LocalSendArchive) {
+        $official = (Resolve-Path -LiteralPath $LocalSendArchive).Path
+        if ((Get-FileHash -LiteralPath $official).Hash -ine '1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc') { throw 'Official LocalSend 1.19.0 archive checksum mismatch' }
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $component = Join-Path $scratch ('localsend-package-' + [guid]::NewGuid().ToString('N'))
+        [IO.Compression.ZipFile]::ExtractToDirectory($official,$component)
+        $compilerArgs += ('"/DLocalSendDir=' + $component + '"')
+    }
+    $compilerArgs += 'setup.iss'
+    $process = Start-Process -FilePath $Iscc -ArgumentList $compilerArgs `
         -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -Wait -PassThru `
         -RedirectStandardOutput (Join-Path $scratch "iscc.log") -RedirectStandardError (Join-Path $scratch "iscc-error.log")
     if ($process.ExitCode -ne 0) {
@@ -73,7 +84,7 @@ try {
         throw "Installer compilation failed"
     }
     if ($Verify) {
-        & "$PSScriptRoot/smoke.ps1" -Executable $installer -VerifyShortcuts
+        & "$PSScriptRoot/smoke.ps1" -Executable $installer -VerifyShortcuts -VerifyLocalSend:([bool]$LocalSendArchive)
     }
     if ($Upx) {
         & $Upx --best --lzma $portable
@@ -86,7 +97,7 @@ try {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $(Split-Path -Leaf $_)"
     } | Set-Content -LiteralPath (Join-Path $dist "SHA256SUMS.txt") -Encoding ascii
-    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/go-qrcode-BSD.txt"), (Join-Path $repo "licenses/native-network-LICENSES.txt"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
+    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/go-qrcode-BSD.txt"), (Join-Path $repo "licenses/native-network-LICENSES.txt"), (Join-Path $repo "licenses/LocalSend-Apache-2.0.txt"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
     Get-Content -LiteralPath $notices | Set-Content -LiteralPath (Join-Path $dist "DEPENDENCY-LICENSES.txt") -Encoding utf8
     Get-ChildItem -LiteralPath $portable,$installer,(Join-Path $dist "SHA256SUMS.txt") | Select-Object FullName,Length
 }
