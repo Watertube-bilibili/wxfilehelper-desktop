@@ -42,7 +42,8 @@ jobs:
             if ($version -match '^0\.') {
               ./scripts/smoke_windows.ps1 -Executable $file
             } elseif ($type -eq 'Setup' -and [version]($version -split '-')[0] -ge [version]'1.2.2') {
-              ./native/packaging/windows/smoke.ps1 -Executable $file -VerifyShortcuts
+              $checkLocalSend = $env:RELEASE_TAG -eq 'v2.0.0-beta.3'
+              ./native/packaging/windows/smoke.ps1 -Executable $file -VerifyShortcuts -VerifyLocalSend:$checkLocalSend
             } else {
               ./native/packaging/windows/smoke.ps1 -Executable $file
             }
