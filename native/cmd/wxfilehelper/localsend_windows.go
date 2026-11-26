@@ -273,16 +273,26 @@ func (a *window) officialLayout(put positionControl, left, right, top, btn int) 
 		return
 	}
 	title := a.tr("打开 LocalSend", "Open LocalSend")
-	if !localsendui.Ready() {
-		title = a.tr("获取官方组件 · 24.9 MiB", "Get official component · 24.9 MiB")
+	ready := localsendui.Ready()
+	_, offline := localsendui.ArchiveSource()
+	if !ready {
+		if offline {
+			title = a.tr("载入离线组件", "Load offline component")
+		} else {
+			title = a.tr("获取官方组件 · 24.9 MiB", "Get official component · 24.9 MiB")
+		}
 	}
 	put(idOfficial, left, top+112, min(260, w), btn+4)
 	setText(a.children[idOfficial], title)
 	next := top + btn + 123
 	put(idPickOfficial, left, next, min(w/2-3, 205), btn)
 	setText(a.children[idPickOfficial], a.tr("选择已解压的原版", "Choose extracted app"))
-	if !localsendui.Ready() {
+	if !ready || a.local.status != "" {
 		put(idGetZIP, left+min(w/2-3, 205)+6, next, min(w/2-4, 167), btn)
-		setText(a.children[idGetZIP], a.tr("下载官方 ZIP", "Download official ZIP"))
+		label := a.tr("下载官方 ZIP", "Download official ZIP")
+		if offline {
+			label = a.tr("打开离线 ZIP", "Open offline ZIP")
+		}
+		setText(a.children[idGetZIP], label)
 	}
 }
