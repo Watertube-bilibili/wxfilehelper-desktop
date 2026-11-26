@@ -4,7 +4,7 @@
 
 Ultra File adds remote UDP transfers between Windows and web browsers. Share a 12-character pairing code and accept the file on the receiving device. LocalSend now opens its original 1.19.0 Windows client inside the tab. The aligned arrow and multi-resolution icons stay sharp at different DPI settings. Tab, sidebar and hover transitions can reverse in flight and respect the Windows animation setting. Expired WeChat QR codes refresh automatically.
 
-安装版内置可选的 LocalSend 官方组件，适合离线部署。便携版用户可按需获取，或解压官方 Windows x64 ZIP 并在标签中选择 `localsend_app.exe`。Setup includes the optional upstream component for offline installation. Portable users can fetch it or select `localsend_app.exe` from the extracted official Windows x64 ZIP. [LocalSend 1.19.0](https://github.com/localsend/localsend/releases/tag/v1.19.0)
+离线部署时，可把单独提供的 LocalSend 官方 ZIP 放在安装版或便携版 EXE 旁边。便携版用户可按需获取，或解压官方 Windows x64 ZIP 并在标签中选择 `localsend_app.exe`。For offline deployment, put the separate upstream ZIP beside Setup or the portable EXE. Portable users can fetch it or select `localsend_app.exe` from the extracted official Windows x64 ZIP. [LocalSend 1.19.0](https://github.com/localsend/localsend/releases/tag/v1.19.0)
 
 Windows 原生窗口采用「会话收发」布局。经典侧栏集中显示会话记录、文件收件箱、传输队列和三项服务。窄窗口使用带提示的图标侧栏。微信消息按日期分组，手机收件靠左，电脑发件靠右。
 
