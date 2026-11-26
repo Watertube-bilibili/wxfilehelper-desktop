@@ -7,6 +7,7 @@ require (
 	github.com/pion/ice/v4 v4.4.9
 	github.com/pion/webrtc/v4 v4.2.29
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	golang.org/x/sys v0.41.0
 )
 
 require (
@@ -28,6 +29,5 @@ require (
 	github.com/wlynxg/anet v0.0.5 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/net v0.50.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 )
