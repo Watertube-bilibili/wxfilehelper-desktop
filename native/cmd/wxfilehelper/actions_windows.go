@@ -47,35 +47,44 @@ func (a *window) key(m message) bool {
 	}
 	switch m.W {
 	case 9:
-		for _, acct := range a.snap.Accounts {
-			if acct.ID != a.snap.Active {
-				a.switchTo(acct.ID)
+		for i, acct := range a.snap.Accounts {
+			if acct.ID == a.snap.Active {
+				a.switchTo(a.snap.Accounts[(i+1)%len(a.snap.Accounts)].ID)
 				break
 			}
 		}
 		return true
-	case '1', '2':
+	case '1', '2', '3', '4':
 		i := int(m.W - '1')
 		if i < len(a.snap.Accounts) {
 			a.switchTo(a.snap.Accounts[i].ID)
 		}
 		return true
 	case 'T':
-		if len(a.snap.Accounts) < 2 {
+		if len(a.snap.Accounts) < workspaceTabs {
 			a.command(idAdd)
 		}
 		return true
 	case 'O':
+		if a.tab(a.snap.Active).kind != idWeChat {
+			return false
+		}
 		if a.account.SignedIn {
 			a.command(idChoose)
 		}
 		return true
 	case 13:
+		if a.tab(a.snap.Active).kind != idWeChat {
+			return false
+		}
 		if a.account.SignedIn && !a.account.Busy {
 			a.command(idSend)
 		}
 		return true
 	case 'V':
+		if a.tab(a.snap.Active).kind != idWeChat {
+			return false
+		}
 		paths, err := clipboardFiles(a.h)
 		if err != nil {
 			a.fail(err)
@@ -95,6 +104,9 @@ func (a *window) key(m message) bool {
 	return false
 }
 func (a *window) command(id int) {
+	if a.serviceCommand(id) {
+		return
+	}
 	ac := a.account
 	var err error
 	switch id {
@@ -102,7 +114,7 @@ func (a *window) command(id int) {
 		var next uint64
 		next, err = a.c.AddAccount()
 		if err == nil {
-			err = a.c.Start(next)
+			a.startTab(next)
 		}
 	case idExit:
 		a.requestExit()
@@ -128,18 +140,22 @@ func (a *window) command(id int) {
 			err = openTarget(a.h, a.snap.Update.URL)
 		}
 	case idAbout:
-		dialog(a.h, "WX FileHelper "+desktop.Version+"\n\n"+a.tr("独立开源的微信文件传输客户端。由社区维护，与腾讯无隶属关系。软件按 AGPL-3.0 提供，不附带担保。", "An independent open-source client for WeChat File Transfer. Community maintained and unaffiliated with Tencent. Licensed under AGPL-3.0, without warranty."), "WX FileHelper", 0x40)
+		dialog(a.h, "Ultra File "+desktop.Version+"\n\n"+a.tr("独立开源的多服务文件传输客户端。由社区维护，与腾讯无隶属关系。软件按 AGPL-3.0 提供，不附带担保。", "An independent open-source file transfer client. Community maintained and unaffiliated with Tencent. Licensed under AGPL-3.0, without warranty."), "Ultra File", 0x40)
 		return
 	case idRefresh:
 		err = a.c.Start(ac.ID)
 	case idSignout, idCloseTab:
-		if dialog(a.h, a.tr("结束此账号会话？未发送的内容将被清除。", "End this session and clear its unsent items?"), "WX FileHelper", 0x124) != 6 {
+		if dialog(a.h, a.tr("结束此账号会话？未发送的内容将被清除。", "End this session and clear its unsent items?"), "Ultra File", 0x124) != 6 {
 			return
 		}
 		if id == idSignout {
 			err = a.c.SignOut(ac.ID)
 		} else {
 			err = a.c.RemoveAccount(ac.ID)
+			if err == nil {
+				a.tab(ac.ID).close()
+				delete(a.services.slots, ac.ID)
+			}
 		}
 		if err == nil {
 			delete(a.drafts, ac.ID)
@@ -232,6 +248,7 @@ func (a *window) menu() {
 		add(idUpdate, a.tr("检查更新", "Check for updates"), true)
 		separator()
 	}
+	add(idDefaultService, a.tr("当前服务设为启动默认", "Use this service at startup"), true)
 	add(idLanguage, a.tr("English", "简体中文"), true)
 	add(idSignout, a.tr("退出此账号", "Sign out"), a.account.SignedIn)
 	add(idCloseTab, a.tr("关闭此标签页", "Close account tab"), len(a.snap.Accounts) > 1)
@@ -240,7 +257,7 @@ func (a *window) menu() {
 		add(idAbout, a.tr("关于", "About"), true)
 	}
 	separator()
-	add(idExit, a.tr("退出程序", "Quit WX FileHelper"), true)
+	add(idExit, a.tr("退出程序", "Quit Ultra File"), true)
 	var r rect
 	user32.NewProc("GetWindowRect").Call(a.children[idMenu], uintptr(unsafe.Pointer(&r)))
 	choice, _, _ := user32.NewProc("TrackPopupMenu").Call(menu, 0x100|0x8|0x2, uintptr(r.Right), uintptr(r.Bottom), 0, a.h, 0)
@@ -249,6 +266,11 @@ func (a *window) menu() {
 	}
 }
 func (a *window) stateLabel() string {
+	if t := a.tab(a.snap.Active); t.picker {
+		return a.tr("选择此标签的服务", "Choose a service for this tab")
+	} else if t.kind != idWeChat {
+		return a.titleOf(t.kind)
+	}
 	ac := a.account
 	if ac.Error != "" {
 		return ac.Error

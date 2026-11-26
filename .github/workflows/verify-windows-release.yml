@@ -32,7 +32,8 @@ jobs:
           $manifest = (Invoke-WebRequest "$base/SHA256SUMS.txt").Content
           if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
           foreach ($type in 'Portable','Setup') {
-            $name = "WXFileHelper-$version-Windows-x64-$type.exe"
+            $baseVersion = ($version -split '-')[0]
+            $name = if ([version]$baseVersion -ge [version]'2.0.0') { "UltraFile-$baseVersion-Windows-x64-$type.exe" } else { "WXFileHelper-$version-Windows-x64-$type.exe" }
             $file = Join-Path $env:RUNNER_TEMP $name
             Invoke-WebRequest "$base/$name" -OutFile $file
             $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
