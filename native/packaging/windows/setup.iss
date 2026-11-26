@@ -4,6 +4,8 @@
 #define LinkName "WX FileHelper"
 #define RunKey "Software\Microsoft\Windows\CurrentVersion\Run"
 #define RunValue "WXFileHelperDesktop.Native"
+#define LocalSendArchive "LocalSend-1.19.0-windows-x86-64.zip"
+#define LocalSendSHA "1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc"
 
 [Setup]
 AppId={{6D2C9269-414D-46E2-8E62-A2C3DC74AACC}
@@ -40,9 +42,7 @@ OnlyOnTheseArchitectures=此包需要可运行 x64 应用的系统。%nThis inst
 SetupFileCorrupt=安装包完整性检查失败。请重新下载并核对 SHA256SUMS.txt。%nInstaller integrity check failed. Download it again and verify SHA256SUMS.txt.
 
 [Tasks]
-#ifdef LocalSendArchive
-Name: "localsend"; Description: "附带 LocalSend 官方离线包 / Include the official LocalSend offline package"; GroupDescription: "传输服务 / Transfer services"
-#endif
+Name: "localsend"; Description: "复制旁边的 LocalSend 官方离线包 / Copy the adjacent official LocalSend package"; GroupDescription: "传输服务 / Transfer services"; Check: ValidLocalSendArchive
 Name: "desktopicon"; Description: "创建桌面快捷方式 / Create a desktop shortcut"; GroupDescription: "快捷方式 / Shortcuts"
 Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in the tray at sign-in"; GroupDescription: "启动 / Startup"; Flags: unchecked
 
@@ -51,10 +51,8 @@ Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in th
 Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Tasks: not desktopicon; Check: ManageLink('{userdesktop}')
 
 [Files]
-#ifdef LocalSendArchive
-Source: "{#LocalSendArchive}"; DestDir: "{app}\components\LocalSend"; DestName: "LocalSend-1.19.0-windows-x86-64.zip"; Flags: ignoreversion nocompression; Tasks: localsend
+Source: "{src}\{#LocalSendArchive}"; DestDir: "{app}\components\LocalSend"; Flags: external ignoreversion skipifsourcedoesntexist; Tasks: localsend; Check: ValidLocalSendArchive
 Source: "..\..\..\licenses\LocalSend-Apache-2.0.txt"; DestDir: "{app}\licenses"; Tasks: localsend
-#endif
 Source: "..\..\dist\windows\{#AppVersion}\UltraFile-{#AppVersion}-Windows-x64-Portable.exe"; DestDir: "{app}"; DestName: "WXFileHelper.exe"; Flags: ignoreversion; Check: PayloadNeedsInstall
 Source: "..\..\..\LICENSE"; DestDir: "{app}"
 Source: "..\..\..\DISCLAIMER.md"; DestDir: "{app}"
@@ -80,6 +78,20 @@ Filename: "{app}\WXFileHelper.exe"; Description: "Launch / 启动 Ultra File"; F
 [Code]
 var
   DesktopLink, SavedForeignLink: String;
+  CheckedLocalSend, ValidLocalSend: Boolean;
+
+function ValidLocalSendArchive: Boolean;
+var
+  Archive: String;
+begin
+  if not CheckedLocalSend then begin
+    CheckedLocalSend := True;
+    Archive := ExpandConstant('{src}\{#LocalSendArchive}');
+    if FileExists(Archive) then
+      ValidLocalSend := CompareText(GetSHA256OfFile(Archive), '{#LocalSendSHA}') = 0;
+  end;
+  Result := ValidLocalSend;
+end;
 
 function PayloadNeedsInstall: Boolean;
 var

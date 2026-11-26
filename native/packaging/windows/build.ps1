@@ -70,7 +70,8 @@ try {
     if ($LocalSendArchive) {
         $official = (Resolve-Path -LiteralPath $LocalSendArchive).Path
         if ((Get-FileHash -LiteralPath $official).Hash -ine '1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc') { throw 'Official LocalSend 1.19.0 archive checksum mismatch' }
-        $compilerArgs += ('"/DLocalSendArchive=' + $official + '"')
+        $companion = Join-Path $dist 'LocalSend-1.19.0-windows-x86-64.zip'
+        if ($official -ne $companion) { Copy-Item -LiteralPath $official -Destination $companion -Force }
     }
     $compilerArgs += 'setup.iss'
     $process = Start-Process -FilePath $Iscc -ArgumentList $compilerArgs `
@@ -90,7 +91,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Portable integrity check failed" }
         if ($Verify) { & "$PSScriptRoot/smoke.ps1" -Executable $portable }
     }
-    @($portable, $installer) | ForEach-Object {
+    $assets = @($portable, $installer)
+    if ($LocalSendArchive) { $assets += $companion }
+    $assets | ForEach-Object {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $(Split-Path -Leaf $_)"
     } | Set-Content -LiteralPath (Join-Path $dist "SHA256SUMS.txt") -Encoding ascii

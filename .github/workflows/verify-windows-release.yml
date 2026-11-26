@@ -43,6 +43,10 @@ jobs:
               ./scripts/smoke_windows.ps1 -Executable $file
             } elseif ($type -eq 'Setup' -and [version]($version -split '-')[0] -ge [version]'1.2.2') {
               $checkLocalSend = $env:RELEASE_TAG -eq 'v2.0.0-beta.3'
+              if ($checkLocalSend) {
+                $zip = 'LocalSend-1.19.0-windows-x86-64.zip'
+                Invoke-WebRequest "$base/$zip" -OutFile (Join-Path $env:RUNNER_TEMP $zip)
+              }
               ./native/packaging/windows/smoke.ps1 -Executable $file -VerifyShortcuts -VerifyLocalSend:$checkLocalSend
             } else {
               ./native/packaging/windows/smoke.ps1 -Executable $file

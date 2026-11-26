@@ -63,7 +63,7 @@ Dependency license files extracted from installed distributions are included und
 
 ## 原版 LocalSend 与远程传输 · LocalSend and remote transfers
 
-Windows 安装版可选装未经修改的 LocalSend 1.19.0，便携版可按需获取同一原版组件。程序在启动前校验组件文件的 SHA-256。LocalSend 按 Apache-2.0 分发，原版包内附带 Flutter 及依赖声明。The Windows installer can install the unmodified upstream component offline. The portable edition can download or load the same original component. LocalSend runs in its own process and its packaged Flutter notices are preserved. [Apache License 2.0](licenses/LocalSend-Apache-2.0.txt) · [Source](https://github.com/localsend/localsend/tree/v1.19.0)
+发行页单独提供未经修改的 LocalSend 1.19.0 官方 ZIP，用户也可按需获取。程序在启动前校验组件文件的 SHA-256。LocalSend 按 Apache-2.0 分发，原版包内附带 Flutter 及依赖声明。The project distributes the unmodified upstream ZIP as an optional separate release asset. The portable edition can download or load the same original component. LocalSend runs in its own process and its packaged Flutter notices are preserved. [Apache License 2.0](licenses/LocalSend-Apache-2.0.txt) · [Source](https://github.com/localsend/localsend/tree/v1.19.0)
 
 远程传输使用 Pion WebRTC、coder/websocket 及其 Go 依赖。The Windows distribution includes their copyright and license texts. [Native licenses](licenses/native-network-LICENSES.txt)
 
