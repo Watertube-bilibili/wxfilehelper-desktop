@@ -16,7 +16,7 @@ Windows 使用会话时间线。左栏可查看会话记录、会话中的文件
 | --- | --- |
 | 微信文件传输助手 | 用微信扫码，在当前标签内收发。 |
 | 超级文件直传 | 手机和电脑连接同一局域网。在电脑上启用直传，再用安卓客户端扫码。手机可以选择文件发送。反向传输时先在电脑选择文件，再在手机点「接收电脑上的文件」并选择保存位置。 |
-| LocalSend | 在标签内使用官方 LocalSend 1.19.0 的「接收、发送、设置」。首次点「获取官方组件」会下载和校验 24.9 MiB 的 Windows 便携包。 |
+| LocalSend | 在标签内使用官方 LocalSend 1.19.0 的「接收、发送、设置」。Windows 安装版默认勾选原版组件，可离线安装。便携版可按需获取组件，也可以选择已解压的官方版本。 |
 
 直传以 4 MiB 分块，通过两路连接交错传输，失败的块最多重试两次，完成后校验整份文件的 SHA-256。单文件上限 8 GiB。配对码含当前会话的密钥，接收者可以下载当前共享文件并上传文件。电脑收件在下载目录的 Ultra File 子目录。关闭连接所在的标签或退出程序会终止配对。
 
@@ -26,7 +26,7 @@ Windows 使用会话时间线。左栏可查看会话记录、会话中的文件
 
 网页由 GitHub Pages 托管。免费 PeerJS 信令服务交换连接信息，Cloudflare STUN 用于发现可用的 UDP 地址。文件经 DTLS 加密，按 16 KiB 分块，通过有序可靠的 WebRTC 数据通道直达对方。两端对整份文件计算 SHA-256。网络封锁 UDP 或 NAT 无法穿透时会提示连接失败。单文件上限 8 GiB；不支持直接写入磁盘的浏览器最多接收 128 MiB。关闭页面会结束当前连接。
 
-微信登录码过期后会自动取新码。LocalSend 切换标签后可继续运行。离线部署该组件时，把官方 LocalSend-1.19.0-windows-x86-64.zip 放在正在使用的超级文件 EXE 旁，再点「获取官方组件」。[LocalSend 官方发布](https://github.com/localsend/localsend/releases/tag/v1.19.0)
+微信登录码过期后会在原标签自动刷新。手机已扫码时，可继续在微信里确认。切换标签后，LocalSend 仍可传输。便携版如遇组件解压错误，请下载并解压官方 Windows x64 ZIP，在 LocalSend 标签点「选择已解压的原版」，选择其中的 `localsend_app.exe`。超级文件会在启动前逐个校验组件文件。[LocalSend 官方发布](https://github.com/localsend/localsend/releases/tag/v1.19.0)
 
 ### Windows 下载与使用
 
@@ -57,6 +57,8 @@ cd ..
 
 生成的 EXE 位于 `native/dist/windows/`。若工具位于自定义目录，可传入 `-Go` 或 `-Iscc`。macOS 独立发布，两种架构的构建步骤在 [macOS 仓库](https://github.com/Watertube-bilibili/wxfilehelper-macos)。旧 0.2 的 Python/Qt 源码见 [历史标签](https://github.com/Watertube-bilibili/wxfilehelper-desktop/tree/v0.2.0-beta.3)。
 
+构建含离线 LocalSend 的安装版时，将 `-LocalSendArchive` 指向官方 1.19.0 Windows x64 ZIP。脚本会先核对 ZIP 的 SHA-256。
+
 ### 隐私与许可
 
 登录票据、消息和发送队列仅在进程内存中保留。收到的文件由用户选择保存位置。微信服务处理扫码和文件传输，GitHub 接收更新检查请求。每个账号须自行扫码授权。微信服务接口、账户条件和网络状态可能影响可用性。[双语免责声明](DISCLAIMER.md)
@@ -79,7 +81,7 @@ Use **Services** at the top of a tab. Run up to four tabs concurrently and use t
 | --- | --- |
 | WeChat File Transfer | Scan with WeChat and use the tab's conversation. |
 | Ultra File LAN | Join the same LAN, enable the desktop listener and scan its QR in the Android companion. Pick a file on Android to upload. To download, first share a file on the PC, then choose Receive and a destination on the phone. |
-| LocalSend | Use the official LocalSend 1.19.0 Receive, Send and Settings screens inside the tab. First use downloads and verifies the 24.9 MiB Windows portable component. |
+| LocalSend | Use the official LocalSend 1.19.0 Receive, Send and Settings screens inside the tab. Setup includes the optional offline component, selected by default. Portable users can fetch it on demand or select an extracted official copy. |
 
 Two lanes carry alternating 4 MiB chunks, retry failures up to twice, and verify the final SHA-256. Each file can be up to 8 GiB. Pairing credentials allow the holder to upload and download the shared file. Windows saves incoming LAN files under Downloads/Ultra File. Closing the associated tab or quitting ends pairing.
 
@@ -89,7 +91,7 @@ Choose **Remote UDP** in Ultra File LAN or open the [web app](https://watertube-
 
 GitHub Pages hosts the web UI. Free PeerJS signaling exchanges connection information and Cloudflare STUN discovers UDP addresses. Endpoints send ordered, reliable 16 KiB chunks over a DTLS-encrypted WebRTC data channel and verify the complete SHA-256. Blocked UDP or incompatible NAT can prevent a direct connection. The maximum file size is 8 GiB. Browsers without direct disk saving can receive up to 128 MiB. Closing the page ends the connection.
 
-WeChat automatically replaces expired sign-in codes. LocalSend runs its original Windows interface inside the tab and can keep transferring when you switch away. For offline component setup, place the official LocalSend-1.19.0-windows-x86-64.zip next to the running Ultra File EXE, then choose **Get official component**. [Official LocalSend release](https://github.com/localsend/localsend/releases/tag/v1.19.0)
+WeChat refreshes expired QR codes in the same tab. After scanning, complete approval on your phone. LocalSend keeps transferring when you switch tabs. If automatic component extraction fails in the portable edition, extract the official Windows x64 ZIP, click **Choose extracted app** and select its `localsend_app.exe`. Ultra File verifies the component files before launch. [Official LocalSend release](https://github.com/localsend/localsend/releases/tag/v1.19.0)
 
 ### Download and use on Windows
 
@@ -108,6 +110,8 @@ WeChat automatically replaces expired sign-in codes. LocalSend runs its original
 - The app checks GitHub at startup and every six hours while running. Failed scheduled checks retry after 15 minutes. An available update appears in the window with a link to its release.
 
 ### Build from source
+
+To include LocalSend for offline installation, pass its official 1.19.0 Windows x64 ZIP to `-LocalSendArchive`. The script checks the archive's SHA-256.
 
 Use x64 Go 1.26 and Inno Setup 6. Run `go test ./internal/...` from `native/`, then run `native/packaging/windows/build.ps1 -Verify` from the repository root. The first build downloads a pinned Go resource compiler. Outputs are under `native/dist/windows/`. This repository distributes the Windows application. The [separate macOS repository](https://github.com/Watertube-bilibili/wxfilehelper-macos) ships both Mac architectures. The earlier Python/Qt implementation is available at its [0.2 tag](https://github.com/Watertube-bilibili/wxfilehelper-desktop/tree/v0.2.0-beta.3).
 
