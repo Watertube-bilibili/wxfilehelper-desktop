@@ -40,6 +40,9 @@ OnlyOnTheseArchitectures=此包需要可运行 x64 应用的系统。%nThis inst
 SetupFileCorrupt=安装包完整性检查失败。请重新下载并核对 SHA256SUMS.txt。%nInstaller integrity check failed. Download it again and verify SHA256SUMS.txt.
 
 [Tasks]
+#ifdef LocalSendDir
+Name: "localsend"; Description: "安装 LocalSend 官方原版组件 / Install the official LocalSend component"; GroupDescription: "传输服务 / Transfer services"
+#endif
 Name: "desktopicon"; Description: "创建桌面快捷方式 / Create a desktop shortcut"; GroupDescription: "快捷方式 / Shortcuts"
 Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in the tray at sign-in"; GroupDescription: "启动 / Startup"; Flags: unchecked
 
@@ -48,6 +51,11 @@ Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in th
 Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Tasks: not desktopicon; Check: ManageLink('{userdesktop}')
 
 [Files]
+#ifdef LocalSendDir
+Source: "{#LocalSendDir}\*"; DestDir: "{app}\components\LocalSend\1.19.0"; Excludes: "settings.json"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: localsend
+Source: "..\..\..\licenses\LocalSend-Apache-2.0.txt"; DestDir: "{app}\licenses"; Tasks: localsend
+Source: "{#LocalSendDir}\settings.json"; DestDir: "{app}\components\LocalSend\1.19.0"; Flags: onlyifdoesntexist uninsneveruninstall; Tasks: localsend
+#endif
 Source: "..\..\dist\windows\{#AppVersion}\UltraFile-{#AppVersion}-Windows-x64-Portable.exe"; DestDir: "{app}"; DestName: "WXFileHelper.exe"; Flags: ignoreversion; Check: PayloadNeedsInstall
 Source: "..\..\..\LICENSE"; DestDir: "{app}"
 Source: "..\..\..\DISCLAIMER.md"; DestDir: "{app}"
@@ -55,6 +63,7 @@ Source: "..\..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"
 Source: "..\..\..\licenses\ItChat-MIT.txt"; DestDir: "{app}\licenses"
 Source: "..\..\..\licenses\WXFileHelper-MIT.txt"; DestDir: "{app}\licenses"
 Source: "..\..\..\licenses\go-qrcode-BSD.txt"; DestDir: "{app}\licenses"
+Source: "..\..\..\licenses\native-network-LICENSES.txt"; DestDir: "{app}\licenses"
 Source: "go-license.txt"; DestDir: "{app}\licenses"
 
 [Icons]

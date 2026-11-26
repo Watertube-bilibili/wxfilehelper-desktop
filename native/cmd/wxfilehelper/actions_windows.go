@@ -66,7 +66,7 @@ func (a *window) key(m message) bool {
 		}
 		return true
 	case 'O':
-		if a.tab(a.snap.Active).kind != idWeChat {
+		if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
 			return false
 		}
 		if a.account.SignedIn {
@@ -74,7 +74,7 @@ func (a *window) key(m message) bool {
 		}
 		return true
 	case 13:
-		if a.tab(a.snap.Active).kind != idWeChat {
+		if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
 			return false
 		}
 		if a.account.SignedIn && !a.account.Busy {
@@ -82,7 +82,7 @@ func (a *window) key(m message) bool {
 		}
 		return true
 	case 'V':
-		if a.tab(a.snap.Active).kind != idWeChat {
+		if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
 			return false
 		}
 		paths, err := clipboardFiles(a.h)
@@ -124,10 +124,23 @@ func (a *window) command(id int) {
 		return
 	case idLanguage:
 		a.english = !a.english
+		a.setFonts()
 		a.refresh(true)
 		return
-	case idChat, idFiles, idToggleFilter:
-		a.filesOnly = id == idFiles || (id == idToggleFilter && !a.filesOnly)
+	case idChat, idFiles, idTransfers, idToggleFilter:
+		t := a.tab(a.snap.Active)
+		if t.kind != idWeChat {
+			return
+		}
+		if id == idToggleFilter {
+			if t.view == idFiles {
+				id = idChat
+			} else {
+				id = idFiles
+			}
+		}
+		t.picker = false
+		t.view = id
 		a.refresh(true)
 		return
 	case idDownloads:
@@ -173,6 +186,10 @@ func (a *window) command(id int) {
 		i, _, _ := send.Call(a.children[idQueue], 0x188, 0, 0)
 		if int(i) >= 0 {
 			err = a.c.RemoveFile(ac.ID, int(i))
+		}
+	case idCover:
+		if m, ok := a.selectedMessage(); ok && a.canPreview(m) {
+			err = a.c.PreviewCover(ac.ID, m.ID)
 		}
 	case idCopy:
 		if m, ok := a.selectedMessage(); ok {
@@ -238,24 +255,15 @@ func (a *window) menu() {
 		user32.NewProc("AppendMenuW").Call(menu, flags, uintptr(id), uintptr(unsafe.Pointer(wide(label))))
 	}
 	separator := func() { user32.NewProc("AppendMenuW").Call(menu, 0x800, 0, 0) }
-	if !a.rail {
-		label := a.tr("仅显示文件", "Show files only")
-		if a.filesOnly {
-			label = a.tr("显示全部消息", "Show all messages")
-		}
-		add(idToggleFilter, label, true)
-		add(idDownloads, a.tr("打开下载目录", "Open downloads"), true)
-		add(idUpdate, a.tr("检查更新", "Check for updates"), true)
-		separator()
-	}
+	add(idDownloads, a.tr("打开下载目录", "Open downloads"), true)
+	add(idUpdate, a.tr("检查更新", "Check for updates"), true)
+	separator()
 	add(idDefaultService, a.tr("当前服务设为启动默认", "Use this service at startup"), true)
 	add(idLanguage, a.tr("English", "简体中文"), true)
 	add(idSignout, a.tr("退出此账号", "Sign out"), a.account.SignedIn)
 	add(idCloseTab, a.tr("关闭此标签页", "Close account tab"), len(a.snap.Accounts) > 1)
-	if !a.rail {
-		separator()
-		add(idAbout, a.tr("关于", "About"), true)
-	}
+	separator()
+	add(idAbout, a.tr("关于", "About"), true)
 	separator()
 	add(idExit, a.tr("退出程序", "Quit Ultra File"), true)
 	var r rect
@@ -268,8 +276,15 @@ func (a *window) menu() {
 func (a *window) stateLabel() string {
 	if t := a.tab(a.snap.Active); t.picker {
 		return a.tr("选择此标签的服务", "Choose a service for this tab")
+	} else if t.kind == idNearby && t.direct.remoteMode {
+		return a.remoteText(t.direct.last)
+	} else if t.kind == idLocal {
+		return a.officialStatus()
 	} else if t.kind != idWeChat {
-		return a.titleOf(t.kind)
+		if s := t.servers[t.kind]; s != nil {
+			return a.tr("局域网已启用", "LAN enabled") + " · " + s.URL
+		}
+		return a.tr("尚未启用局域网连接", "LAN transfer is off")
 	}
 	ac := a.account
 	if ac.Error != "" {
@@ -285,6 +300,8 @@ func (a *window) stateLabel() string {
 		return a.tr("正在发送…", "Sending…")
 	}
 	switch ac.Status {
+	case "renewing":
+		return a.tr("二维码已过期，正在自动刷新…", "Refreshing the expired sign-in code…")
 	case "connecting":
 		return a.tr("正在连接微信…", "Connecting to WeChat…")
 	case "scan":
@@ -292,7 +309,11 @@ func (a *window) stateLabel() string {
 	case "scanned":
 		return a.tr("请在手机微信上确认", "Confirm in WeChat on your phone")
 	case "online":
-		return a.tr("已连接", "Connected")
+		state := a.tr("已连接", "Connected")
+		if ac.Name != "" {
+			state += " · " + ac.Name
+		}
+		return state
 	case "reconnecting":
 		return a.tr("正在重新连接…", "Reconnecting…")
 	case "expired":

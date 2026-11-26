@@ -36,7 +36,7 @@ func tabProc(h uintptr, msg uint32, w, l, sub, ref uintptr) uintptr {
 func paintTabStrip(h, dc uintptr) {
 	var client rect
 	user32.NewProc("GetClientRect").Call(h, uintptr(unsafe.Pointer(&client)))
-	fill(dc, client, white)
+	fill(dc, client, tabBG)
 	if ui == nil || !ui.ready {
 		return
 	}
@@ -58,4 +58,5 @@ func paintTabStrip(h, dc uintptr) {
 		}
 		ui.drawTab(&item)
 	}
+	ui.tabUnderline(dc, h, client)
 }

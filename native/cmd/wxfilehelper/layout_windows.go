@@ -3,6 +3,8 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"time"
 	"unsafe"
 )
 
@@ -35,104 +37,123 @@ func (a *window) layout() {
 	user32.NewProc("GetClientRect").Call(a.h, uintptr(unsafe.Pointer(&r)))
 	a.w, a.hgt = int(r.Right)*96/a.dpi, int(r.Bottom)*96/a.dpi
 	w, h := a.w, a.hgt
-	historyRow := 70
-	if h < 505 {
-		historyRow = 61
-	}
-	if a.historyRow != historyRow {
-		a.historyRow = historyRow
-		send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(historyRow)))
-	}
 	a.rail = w >= 880 && h >= 490
-	edge := 0
+	dest := 52
 	if a.rail {
-		edge = railWidth
+		dest = railWidth
 	}
+	a.animate(&a.motion.rail, float64(dest), 180*time.Millisecond)
+	edge := a.sidebarWidth()
 	planned := map[int]rect{}
 	put := func(id, x, y, width, height int) { planned[id] = a.box(x, y, max(1, width), max(1, height)) }
 	a.labels = nil
+	a.directHero = rect{}
+	a.directCards = nil
+	a.directProgress = rect{}
 	a.qrBounds, a.qrCard, a.composer, a.queueSurface, a.statusDot = rect{}, rect{}, rect{}, rect{}, rect{}
-
-	margin, btnH := 24, 36
-	y, titleH, tabsY, tabH := 16, 32, 81, 33
-	menuW := 38
-	if w < 690 {
-		margin = 16
+	t := a.tab(a.snap.Active)
+	margin, buttonH, stripH, titleY := 24, 34, 46, 58
+	if w < 760 {
+		margin = 14
 	}
 	if h < 505 {
-		y, titleH, tabsY, tabH = 8, 27, 62, 32
-		btnH = 30
+		buttonH, stripH, titleY = 29, 36, 41
 	}
 	left, right := edge+margin, w-margin
-	put(idServices, right-menuW-113, y+2, 105, btnH)
-	put(idMenu, right-menuW, y+2, menuW, btnH)
-
-	a.caption(a.tr("超级文件", "Ultra File"), left, y, right-left-menuW-125, titleH, a.titleFont, ink, singleLine)
-	statusInk := muted
-	if a.account.Error != "" {
-		statusInk = color(155, 45, 43)
-	} else if a.account.Busy || a.account.Status == "scan" || a.account.Status == "scanned" {
-		statusInk = blue
-	} else if a.account.Status == "online" {
-		statusInk = color(25, 105, 72)
-	}
-	sy := y + titleH + 3
-	a.statusDot = a.box(left+1, sy+7, 7, 7)
-	a.statusInk = statusInk
-	state := a.stateLabel()
-	if t := a.tab(a.snap.Active); t.kind != idWeChat {
-		state = a.titleOf(t.kind)
-		statusInk = muted
-		a.statusInk = muted
-	}
-	a.caption(state, left+16, sy, right-left-16, 22, a.smallFont, statusInk, singleLine)
-
-	tabW := 144
-	if w < 690 {
-		tabW = 124
-	}
 	n := len(a.snap.Accounts)
-	tabW = min(tabW, (right-left-32-tabH)/max(1, n))
-	send.Call(a.children[idTabs], 0x1329, 0, uintptr(a.px(tabW))|(uintptr(a.px(tabH-4))<<16))
-	put(idTabs, left, tabsY, tabW*n+26, tabH)
+	tabW := min(146, (w-edge-62)/max(1, n))
+	tabH := stripH - 8
+	send.Call(a.children[idTabs], 0x1329, 0, uintptr(a.px(tabW))|uintptr(a.px(tabH-5))<<16)
+	put(idTabs, edge+10, stripH-tabH, tabW*n+8, tabH)
 	if n < workspaceTabs {
-		put(idAdd, left+tabW*n+31, tabsY, tabH, tabH-2)
+		put(idAdd, edge+20+tabW*n, stripH-tabH, 32, tabH-2)
 	}
-	a.headerHeight = tabsY + tabH + 9
 
+	title := a.titleOf(t.kind)
+	if t.picker {
+		title = a.tr("切换服务", "Switch service")
+	}
+	if t.kind == idWeChat && a.account.SignedIn && !t.picker {
+		if t.view == idFiles {
+			title = a.tr("文件收件箱", "File inbox")
+		}
+		if t.view == idTransfers {
+			title = a.tr("传输队列", "Transfer queue")
+		}
+	}
+	titleH := 33
+	if h < 505 {
+		titleH = 27
+	}
+	a.caption(title, left, titleY, right-left-151, titleH, a.titleFont, ink, singleLine)
+	put(idServices, right-139, titleY+3, 102, buttonH)
+	put(idMenu, right-32, titleY+3, 32, buttonH)
+	a.statusInk = muted
+	if !t.picker {
+		switch {
+		case t.kind == idWeChat && a.account.Error != "":
+			a.statusInk = color(157, 60, 43)
+		case t.kind == idWeChat && a.account.SignedIn, t.servers[t.kind] != nil:
+			a.statusInk = accent
+		}
+	}
+	sy := titleY + titleH
+	a.statusDot = a.box(left+1, sy+8, 7, 7)
+	a.caption(a.stateLabel(), left+14, sy, right-left-14, 21, a.smallFont, muted, singleLine)
+	a.headerHeight = sy + 29
+
+	navTop, step, navH := 88, 41, 37
+	if h < 505 {
+		navTop, step, navH = 60, 33, 29
+	}
+	navX := 12
+	if !a.rail {
+		navX = 6
+	}
+	navW := edge - 2*navX
 	if a.rail {
-		a.caption("Ultra File", 20, 76, railWidth-38, 29, a.brandFont, ink, singleLine)
-		if t := a.tab(a.snap.Active); t.kind == idWeChat && !t.picker {
-			put(idChat, 12, 129, railWidth-24, 40)
-			put(idFiles, 12, 173, railWidth-24, 40)
+		a.caption(a.tr("超级文件", "Ultra File"), 66, 18, edge-70, 28, a.brandFont, ink, singleLine)
+		a.caption(a.tr("Ultra File", "File transfer"), 66, 44, edge-70, 18, a.smallFont, muted, singleLine)
+	}
+	if t.kind == idWeChat {
+		for i, id := range []int{idChat, idFiles, idTransfers} {
+			put(id, navX, navTop+i*step, navW, navH)
 		}
-		put(idDownloads, 12, h-135, railWidth-24, 36)
-		put(idUpdate, 12, h-94, railWidth-24, 36)
-		put(idAbout, 12, h-53, railWidth-24, 36)
+	} else {
+		put(idDownloads, navX, navTop, navW, navH)
 	}
-	panelWidth := 1120
-	if width := right - left; width > panelWidth {
-		inset := (width - panelWidth) / 2
-		left, right = left+inset, right-inset
+	servicesTop := navTop + 3*step + 32
+	if a.rail {
+		a.caption(a.tr("传输服务", "Services"), 24, servicesTop-26, edge-40, 20, a.smallFont, muted, singleLine)
 	}
-	top := a.headerHeight + 12
+	if !a.rail {
+		servicesTop -= 17
+	}
+	for i, id := range []int{idNavWeChat, idNavNearby, idNavLocal} {
+		put(id, navX, servicesTop+i*step, navW, navH)
+	}
+	if a.rail {
+		a.caption(a.tr("此电脑 · Windows", "This PC · Windows"), 44, h-42, edge-48, 28, a.smallFont, muted, singleLine)
+	}
+	if width := right - left; width > 1160 {
+		inset := (width - 1160) / 2
+		left += inset
+		right -= inset
+	}
+
+	top := a.headerHeight + 8
 	if a.snap.Update != nil {
-		if h < 505 {
-			put(idNotice, w-margin-154, tabsY, 154, tabH-2)
-		} else {
-			put(idNotice, left, top, min(360, right-left), btnH)
-			top += btnH + 8
-		}
+		put(idNotice, left, top, min(345, right-left), buttonH)
+		top += buttonH + 5
 	}
 	a.contentLeft, a.contentRight, a.contentTop = left, right, top
-	if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
-		a.serviceLayout(put, left, right, top, btnH)
+	if t.picker || t.kind != idWeChat {
+		a.serviceLayout(put, left, right, top+8, buttonH)
 	} else if a.account.SignedIn {
-		a.layoutTransfer(put, left, right, top, btnH)
+		a.layoutTransfer(put, left, right, top, buttonH)
 	} else {
-		a.layoutLogin(put, left, right, top, btnH)
+		a.layoutLogin(put, left, right, top, buttonH)
 	}
-
 	for id, child := range a.children {
 		next, visible := planned[id]
 		old, was := a.placements[id]
@@ -150,6 +171,8 @@ func (a *window) layout() {
 		}
 	}
 	a.placements = planned
+	a.placeOfficial()
+	a.updateEditorScroll()
 }
 
 func (a *window) layoutLogin(put positionControl, left, right, top, btnH int) {
@@ -190,61 +213,96 @@ func (a *window) layoutLogin(put positionControl, left, right, top, btnH int) {
 	put(idRefresh, center-82, qy+size+hintH+14, 164, btnH)
 }
 
+func (a *window) sidebarWidth() int {
+	if a.motion.rail.initialized {
+		return int(math.Round(a.motion.rail.value(time.Now())))
+	}
+	if a.rail {
+		return railWidth
+	}
+	return 52
+}
+
 func (a *window) layoutTransfer(put positionControl, left, right, top, btnH int) {
 	width := right - left
-	inset, gap := 14, 8
-	if a.hgt < 505 {
-		inset, gap = 10, 6
+	compact := a.hgt < 505
+	inset := 12
+	if compact {
+		inset = 8
 	}
 	innerLeft, innerRight := left+inset, right-inset
-	bottom := a.hgt - 14
+	bottom := a.hgt - inset
 	y := bottom - inset - btnH
-	sendW, fileW, stopW, saveW, copyW := 104, 124, 111, 100, 72
-	put(idChoose, innerLeft, y, fileW, btnH)
-	put(idSend, innerRight-sendW, y, sendW, btnH)
+	put(idChoose, innerLeft, y, 108, btnH)
+	put(idSend, innerRight-83, y, 83, btnH)
 	if a.account.Busy {
-		put(idStop, innerLeft+fileW+gap, y, stopW, btnH)
+		put(idStop, innerLeft+116, y, 95, btnH)
+	} else if width > 430 {
+		a.caption(a.tr("Ctrl + Enter 发送", "Ctrl + Enter to send"), innerLeft+111, y, innerRight-innerLeft-199, btnH, a.smallFont, muted, singleLine|1)
 	}
-	editH := max(31, min(61, a.hgt/11))
-	if a.hgt < 505 {
-		editH = 31
+	editH := 32
+	if compact {
+		editH = 24
 	}
-	editY := y - editH - gap
-	put(idEditor, innerLeft+1, editY, innerRight-innerLeft-2, editH)
-	labelH := 24
-	if a.hgt < 505 {
-		labelH = 22
-	}
-	labelY := editY - labelH
-	a.caption(a.tr("消息", "Message"), innerLeft, labelY, width/2, labelH, a.brandFont, ink, singleLine)
-	a.caption(a.tr("Ctrl+Enter 发送", "Ctrl+Enter to send"), innerLeft, labelY, innerRight-innerLeft-2, labelH, a.smallFont, muted, singleLine|2)
-	composerTop := labelY - 5
-	if n := len(a.account.Files); n > 0 {
-		queueH := queueRowHeight * min(n, 2)
-		if a.hgt < 505 {
-			queueH = queueRowHeight
+	editY := y - editH - 4
+	put(idEditor, innerLeft+2, editY, innerRight-innerLeft-4, editH)
+	composerTop := editY - inset
+	queueView := a.tab(a.snap.Active).view == idTransfers
+	n := len(a.account.Files)
+	if queueView {
+		a.caption(fmt.Sprintf(a.tr("待发送 · %d 个文件", "Queued · %d files"), n), left, top, width-95, btnH, a.brandFont, ink, singleLine)
+		if n > 0 {
+			put(idRemoveFile, right-84, top, 84, btnH)
+			listY := top + btnH + 5
+			put(idQueue, left, listY, width, max(20, composerTop-listY-6))
+		} else {
+			a.caption(a.tr("添加文件，或将文件拖到窗口。", "Add files or drop them into the window."), left, top+btnH+20, width, 34, a.font, muted, singleLine|1)
 		}
-		listY := labelY - queueH - 8
-		a.queueSurface = a.box(innerLeft-2, listY-2, innerRight-innerLeft+4, queueH+4)
-		put(idQueue, innerLeft+1, listY, innerRight-innerLeft-2, queueH)
-		barH := btnH - 4
-		barY := listY - barH - 5
-		a.caption(fmt.Sprintf(a.tr("待发送 · %d 项", "Queued · %d"), n), innerLeft, barY, innerRight-innerLeft-100, barH, a.smallFont, muted, singleLine)
-		put(idRemoveFile, innerRight-88, barY, 88, barH)
-		composerTop = min(composerTop, barY-5)
+	} else {
+		if n > 0 {
+			queueH := queueRowHeight * min(n, 2)
+			if compact {
+				queueH = queueRowHeight
+			}
+			listY := composerTop - queueH - 3
+			put(idQueue, innerLeft, listY, innerRight-innerLeft, queueH)
+			barH := btnH - 5
+			barY := listY - barH - 3
+			a.caption(fmt.Sprintf(a.tr("待发送 · %d 项", "Queued · %d"), n), innerLeft, barY, innerRight-innerLeft-85, barH, a.smallFont, muted, singleLine)
+			put(idRemoveFile, innerRight-76, barY, 76, barH)
+			composerTop = barY - 4
+		}
+		historyBottom := composerTop
+		if m, ok := a.selectedMessage(); ok {
+			barH := btnH - 4
+			barY := composerTop - barH - 3
+			x := right
+			if m.CanDownload() {
+				x -= 89
+				put(idSave, x, barY, 89, barH)
+				x -= 5
+			}
+			x -= 65
+			put(idCopy, x, barY, 65, barH)
+			x -= 5
+			if a.canPreview(m) {
+				x -= 108
+				put(idCover, x, barY, 108, barH)
+			}
+			historyBottom = barY
+		}
+		historyH := max(18, historyBottom-top-6)
+		if len(a.timeline) > 0 {
+			put(idHistory, left, top, width, historyH)
+		} else {
+			empty := a.tr("收到的消息会显示在这里", "Received messages will appear here")
+			if a.filesOnly {
+				empty = a.tr("这个会话还没有附件", "No attachments in this conversation yet")
+			}
+			a.caption(empty, left, top+max(0, (historyH-30)/2), width, 30, a.font, muted, singleLine|1)
+		}
 	}
 	a.composer = a.box(left, composerTop, width, bottom-composerTop)
-
-	title := a.tr("会话消息", "Conversation")
-	if a.filesOnly {
-		title = a.tr("会话中的文件", "Session files")
-	}
-	a.caption(title, left+2, top, width-saveW-copyW-16, btnH, a.brandFont, ink, singleLine)
-	put(idCopy, right-copyW-saveW-7, top, copyW, btnH)
-	put(idSave, right-saveW, top, saveW, btnH)
-	historyY := top + btnH + 5
-	historyH := max(20, composerTop-historyY-8)
-	put(idHistory, left, historyY, width, historyH)
 }
 
 func (a *window) paint() {
@@ -256,15 +314,30 @@ func (a *window) paint() {
 
 func (a *window) drawSurface(dc uintptr, bounds rect) {
 	fill(dc, bounds, base)
-	edge := 0
-	if a.rail {
-		edge = railWidth
-		fill(dc, a.box(0, 0, edge, a.hgt), railBG)
-		fill(dc, a.box(edge-1, 0, 1, a.hgt), border)
-		fill(dc, a.box(18, a.hgt-147, edge-36, 1), border)
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.px(20)), uintptr(a.px(22)), a.icon, uintptr(a.px(44)), uintptr(a.px(44)), 0, 0, 3)
+	edge := a.sidebarWidth()
+	fill(dc, a.box(0, 0, edge, a.hgt), railBG)
+	fill(dc, a.box(edge-1, 0, 1, a.hgt), border)
+	size, x, y := 40, 16, 22
+	if !a.rail {
+		size, x, y = 32, 10, 12
 	}
-	fill(dc, a.box(edge, 0, a.w-edge, a.headerHeight), white)
+	logo := a.box(x, y, size, size)
+	if icon := a.services.logos[idNearby]; icon != nil && icon.image != nil {
+		icon.drawOn(dc, logo, railBG)
+	}
+	side := int32(a.px(15))
+	x = 22
+	if !a.rail {
+		x = 18
+	}
+	a.glyph(dc, "monitor", int32(a.px(x)), int32(a.px(a.hgt-34)), side, muted)
+	fill(dc, a.box(edge, 0, a.w-edge, a.headerHeight), base)
+	stripH := 46
+	if a.hgt < 505 {
+		stripH = 36
+	}
+	fill(dc, a.box(edge, 0, a.w-edge, stripH), tabBG)
+	fill(dc, a.box(edge, stripH-1, a.w-edge, 1), border)
 	fill(dc, a.box(edge, a.headerHeight-1, a.w-edge, 1), border)
 	if a.statusDot.Right > a.statusDot.Left {
 		roundedSurface(dc, a.statusDot, a.px(8), a.statusInk, a.statusInk)
@@ -272,12 +345,30 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 	if a.composer.Right > a.composer.Left {
 		outline := border
 		if focused, _, _ := user32.NewProc("GetFocus").Call(); focused == a.children[idEditor] {
-			outline = blue
+			outline = accent
 		}
-		roundedSurface(dc, a.composer, a.px(12), white, outline)
+		roundedSurface(dc, a.composer, a.px(9), white, outline)
 	}
 	if a.queueSurface.Right > a.queueSurface.Left {
 		roundedSurface(dc, a.queueSurface, a.px(7), base, border)
+	}
+	if r := a.directHero; r.Right > r.Left {
+		roundedSurface(dc, r, a.px(10), accentWash, border)
+		side := int32(a.px(28))
+		x := r.Left + int32(a.px(12))
+		y := (r.Top + r.Bottom - side) / 2
+		a.glyph(dc, "monitor", x, y, side, accent)
+	}
+	for _, card := range a.directCards {
+		roundedSurface(dc, card, a.px(9), white, border)
+	}
+	if bar := a.directProgress; bar.Right > bar.Left {
+		roundedSurface(dc, bar, a.px(3), accentWash, 0)
+		s := a.tab(a.snap.Active).direct.last
+		if s.Size > 0 && s.Done > 0 {
+			bar.Right = bar.Left + int32(int64(bar.Right-bar.Left)*s.Done/s.Size)
+			roundedSurface(dc, bar, a.px(3), accent, 0)
+		}
 	}
 	for _, label := range a.labels {
 		textAt(dc, label.text, label.box, label.font, label.ink, label.flags)
@@ -296,11 +387,11 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 			textAt(dc, text, r, a.smallFont, muted, singleLine|1)
 		}
 	}
-	if a.account.Busy && a.account.Total > 0 {
+	if t := a.tab(a.snap.Active); t.kind == idWeChat && !t.picker && a.account.Busy && a.account.Total > 0 {
 		width := a.contentRight - a.contentLeft
 		progress := min(100, max(0, int(a.account.Sent*100/a.account.Total)))
-		fill(dc, a.box(a.contentLeft, a.headerHeight-3, width, 2), paleBlue)
-		fill(dc, a.box(a.contentLeft, a.headerHeight-3, width*progress/100, 2), blue)
+		fill(dc, a.box(a.contentLeft, a.headerHeight-3, width, 2), accentWash)
+		fill(dc, a.box(a.contentLeft, a.headerHeight-3, width*progress/100, 2), accent)
 	}
 }
 

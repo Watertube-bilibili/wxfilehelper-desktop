@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Executable,
     [switch]$VerifyShortcuts,
+    [switch]$VerifyLocalSend,
     [string]$PreviousInstaller
 )
 
@@ -81,6 +82,19 @@ function Install-ForTest([string]$Step, [string]$TaskArgument, [string]$Setup = 
     Invoke-Setup $Setup $arguments
 }
 
+function Assert-LocalSend {
+    $component = Join-Path $target 'components/LocalSend/1.19.0'
+    $indexPath = Join-Path $PSScriptRoot '../../internal/localsendui/official-files.json'
+    $index = Get-Content -LiteralPath $indexPath -Raw | ConvertFrom-Json
+    foreach ($file in $index.PSObject.Properties) {
+        $path = Join-Path $component $file.Name
+        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $file.Value) {
+            throw "Incorrect LocalSend component file: $($file.Name)"
+        }
+    }
+    Write-Output "Verified the installed official LocalSend component"
+}
+
 function Uninstall-ForTest([string]$Step) {
     $uninstaller = Join-Path $target 'unins000.exe'
     if (Test-Path -LiteralPath $uninstaller) {
@@ -159,6 +173,7 @@ try {
             } else {
                 Install-ForTest 'setup' ''
             }
+            if ($VerifyLocalSend -and !$PreviousInstaller) { Assert-LocalSend }
             Assert-TaskSelection $true $false
             $shortcutReport = Join-Path $sandbox 'desktop-launch.txt'
             $env:WXFILEHELPER_SMOKE_REPORT = $shortcutReport
@@ -179,8 +194,8 @@ try {
         } else {
             Install-ForTest 'setup' '/TASKS=""'
         }
-        if ((Get-ChildItem -LiteralPath $target -Filter "*.dll" -File -Recurse).Count -ne 0) {
-            throw "The installer included an external DLL"
+        if ((Get-ChildItem -LiteralPath $target -Filter "*.dll" -File).Count -ne 0) {
+            throw "The Ultra File application directory included an external DLL"
         }
     }
     $env:WXFILEHELPER_SMOKE_REPORT = $report

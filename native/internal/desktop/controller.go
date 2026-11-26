@@ -6,6 +6,7 @@ package desktop
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,7 +17,7 @@ import (
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/wechat"
 )
 
-const Version = "2.0.0"
+const Version = "2.0.0-beta.3"
 
 const (
 	maxAccounts = 2
@@ -34,6 +35,8 @@ type Account struct {
 	Messages            []wechat.Message
 	Files               []QueuedFile
 	Sent, Total         int64
+	Previewing          string
+	Covers              map[string][]byte `json:"-"`
 }
 
 type QueuedFile struct {
@@ -72,9 +75,10 @@ func (s *session) close() {
 
 type account struct {
 	Account
-	session  *session
-	username string
-	stop     bool
+	session    *session
+	username   string
+	stop       bool
+	coverOrder []string
 }
 
 type Controller struct {
@@ -124,6 +128,7 @@ func (c *Controller) Snapshot() Snapshot {
 		view.QR = slices.Clone(view.QR)
 		view.Files = slices.Clone(view.Files)
 		view.Messages = slices.Clone(view.Messages)
+		view.Covers = maps.Clone(view.Covers)
 		s.Accounts = append(s.Accounts, view)
 	}
 	return s
@@ -269,38 +274,45 @@ func (c *Controller) change(id uint64, s *session, change func(*account)) bool {
 }
 
 func (c *Controller) connect(id uint64, s *session) {
-	qr, err := s.client.CreateQR(s.ctx)
-	if err != nil {
-		c.expire(id, s, err)
-		return
-	}
-	if !c.change(id, s, func(a *account) { a.QR, a.Status = qr, "scan" }) {
-		return
-	}
-	for {
-		state, err := s.client.PollLogin(s.ctx)
+	retryDelay := time.Second
+renew:
+	for s.ctx.Err() == nil {
+		qr, err := s.client.CreateQR(s.ctx)
 		if err != nil {
 			c.expire(id, s, err)
 			return
 		}
-		switch state {
-		case "confirmed":
-			if c.authorize(id, s) {
-				c.sync(id, s)
-			}
-			return
-		case "scanned":
-			c.change(id, s, func(a *account) { a.Status = "scanned" })
-		case "waiting":
-		case "expired":
-			c.expire(id, s, errors.New("二维码已过期，请刷新 / QR code expired. Refresh to try again."))
-			return
-		default:
-			c.expire(id, s, errors.New("无法识别登录状态 / Unrecognized sign-in state"))
+		if !c.change(id, s, func(a *account) { a.QR, a.Status = qr, "scan" }) {
 			return
 		}
-		if !pause(s.ctx, 400*time.Millisecond) {
-			return
+		for {
+			state, err := s.client.PollLogin(s.ctx)
+			if err != nil {
+				c.expire(id, s, err)
+				return
+			}
+			switch state {
+			case "confirmed":
+				if c.authorize(id, s) {
+					c.sync(id, s)
+				}
+				return
+			case "scanned":
+				c.change(id, s, func(a *account) { a.Status = "scanned" })
+			case "waiting":
+			case "expired":
+				if !c.change(id, s, func(a *account) { a.QR = nil; a.Status = "renewing" }) || !pause(s.ctx, retryDelay) {
+					return
+				}
+				retryDelay = min(30*time.Second, retryDelay*2)
+				continue renew
+			default:
+				c.expire(id, s, errors.New("无法识别登录状态 / Unrecognized sign-in state"))
+				return
+			}
+			if !pause(s.ctx, 400*time.Millisecond) {
+				return
+			}
 		}
 	}
 }
@@ -565,8 +577,16 @@ func (c *Controller) send(id uint64, s *session, text string, files []QueuedFile
 			failure = err
 			return
 		}
+		var cover []byte
+		presentation := IsPresentation(file.Name)
+		if presentation {
+			cover = presentationCover(file.Path)
+		}
 		if !c.change(id, s, func(a *account) {
 			appendMessage(a, message, false)
+			if presentation {
+				a.rememberCover(message.ID, cover)
+			}
 			a.Files = slices.Delete(a.Files, 0, 1)
 		}) {
 			return
@@ -604,8 +624,16 @@ func (c *Controller) download(id uint64, s *session, message wechat.Message, tar
 		c.expire(id, s, err)
 		return
 	}
+	var cover []byte
+	presentation := err == nil && IsPresentation(message.Text)
+	if presentation {
+		cover = presentationCover(target)
+	}
 	c.change(id, s, func(a *account) {
 		a.Downloading = false
+		if presentation {
+			a.rememberCover(message.ID, cover)
+		}
 		if err != nil {
 			a.Error = err.Error()
 		}

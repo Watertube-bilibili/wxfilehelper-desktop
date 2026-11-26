@@ -10,7 +10,6 @@ import (
 	_ "image/png"
 	"slices"
 	"strings"
-	"time"
 	"unsafe"
 
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/desktop"
@@ -18,14 +17,15 @@ import (
 )
 
 var (
-	base     = color(249, 251, 253)
-	railBG   = color(238, 243, 248)
-	border   = color(206, 217, 229)
-	ink      = color(31, 46, 65)
-	muted    = color(82, 101, 125)
-	blue     = color(0, 98, 174)
-	paleBlue = color(224, 239, 253)
-	white    = color(255, 255, 255)
+	base       = color(252, 253, 249)
+	railBG     = color(242, 245, 239)
+	border     = color(220, 227, 219)
+	ink        = color(36, 49, 46)
+	muted      = color(88, 103, 97)
+	accent     = color(37, 105, 83)
+	accentWash = color(231, 241, 233)
+	tabBG      = color(239, 242, 236)
+	white      = color(255, 255, 255)
 )
 
 type qrBitmap struct {
@@ -50,16 +50,16 @@ func (q *qrBitmap) load(data []byte) {
 	q.pixels = make([]byte, q.width*q.height*4)
 	for y := 0; y < q.height; y++ {
 		for x := 0; x < q.width; x++ {
-			r, g, b, _ := img.At(img.Bounds().Min.X+x, img.Bounds().Min.Y+y).RGBA()
+			r, g, b, alpha := img.At(img.Bounds().Min.X+x, img.Bounds().Min.Y+y).RGBA()
 			i := 4 * (y*q.width + x)
-			q.pixels[i] = byte(b >> 8)
-			q.pixels[i+1] = byte(g >> 8)
-			q.pixels[i+2] = byte(r >> 8)
+			q.pixels[i] = byte((b + 65535 - alpha) >> 8)
+			q.pixels[i+1] = byte((g + 65535 - alpha) >> 8)
+			q.pixels[i+2] = byte((r + 65535 - alpha) >> 8)
 		}
 	}
 }
 func (a *window) createChildren() error {
-	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice, idServices, idWeChat, idNearby, idLocal, idQQ, idDefaultService, idHost, idPair, idPeer, idNearSend, idAccept, idReject} {
+	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice, idServices, idWeChat, idNearby, idLocal, idDefaultService, idHost, idPair, idPeer, idNearSend, idTransfers, idCover, idNavWeChat, idNavNearby, idNavLocal, idOfficial, idLANMode, idUDPMode, idWeb, idRemoteListen, idRemoteSend, idRemoteStop, idRemoteCopy, idRemoteAccept, idLANFolder, idPickOfficial, idGetZIP} {
 		class := "BUTTON"
 		style := uintptr(0x40010000 | 0x0000000b)
 		ex := uintptr(0) // WS_CHILD | WS_TABSTOP, owner drawn button
@@ -69,7 +69,10 @@ func (a *window) createChildren() error {
 			// Multiline mode suppresses the system up/down spinner. Our two fixed
 			// slots fit in one row. The native tab retains its full input behavior.
 			style = 0x40010000 | 0x0400 | 0x2000 | 0x200 | 0x800
-		case idHistory, idQueue:
+		case idHistory:
+			class = "LISTBOX"
+			style = 0x40210000 | 0x101 | 0x40 | 0x20 // LBS_OWNERDRAWVARIABLE
+		case idQueue:
 			class = "LISTBOX"
 			style = 0x40210000 | 0x101 | 0x40 | 0x10 // notifications, fixed owner-drawn rows, accessible strings
 		case idPeer:
@@ -84,13 +87,22 @@ func (a *window) createChildren() error {
 			return fmt.Errorf("%s (%d): %w", class, id, err)
 		}
 		a.children[id] = child
+		if class == "BUTTON" {
+			comctl32.NewProc("SetWindowSubclass").Call(child, hoverCallback, 2, uintptr(id))
+		}
+		if id == idEditor {
+			if ok, _, err := comctl32.NewProc("SetWindowSubclass").Call(child, editorCallback, 1, 0); ok == 0 {
+				return fmt.Errorf("Initialize composer: %w", err)
+			}
+		}
 		if id == idTabs {
 			if ok, _, err := comctl32.NewProc("SetWindowSubclass").Call(child, tabCallback, 1, 0); ok == 0 {
 				return fmt.Errorf("Initialize account tabs: %w", err)
 			}
 		}
 	}
-	send.Call(a.children[idPeer], 0x1501, 0, uintptr(unsafe.Pointer(wide("LocalSend IP (192.168.1.20)"))))
+	a.createTooltips()
+	send.Call(a.children[idPeer], 0x1501, 0, uintptr(unsafe.Pointer(wide("abcd efgh jkmn"))))
 	send.Call(a.children[idEditor], 0x00c5, 1024*1024, 0)
 	return nil
 }
@@ -104,14 +116,14 @@ func (a *window) freeFonts() {
 func (a *window) setFonts() {
 	old := []uintptr{a.font, a.smallFont, a.brandFont, a.titleFont}
 	size := 15
-	a.font = createFont(size, 400, a.dpi)
-	a.smallFont = createFont(size-2, 400, a.dpi)
-	a.brandFont = createFont(size+1, 600, a.dpi)
-	a.titleFont = createFont(size+8, 600, a.dpi)
+	face := a.tr("Microsoft YaHei UI", "Segoe UI")
+	a.font = createFont(size, 400, a.dpi, face)
+	a.smallFont = createFont(size-2, 400, a.dpi, face)
+	a.brandFont = createFont(size+1, 600, a.dpi, face)
+	a.titleFont = createFont(size+8, 600, a.dpi, face)
 	for _, h := range a.children {
 		send.Call(h, 0x30, a.font, 1)
 	}
-	send.Call(a.children[idHistory], 0x1a0, 0, uintptr(a.px(size*4+10)))
 	send.Call(a.children[idQueue], 0x1a0, 0, uintptr(a.px(queueRowHeight)))
 	for _, h := range old {
 		if h != 0 {
@@ -124,17 +136,22 @@ const queueRowHeight = 30
 
 func (a *window) changeLabels() {
 	for id, s := range map[int]string{
-		idServices: a.tr("切换服务", "Services"), idAdd: a.tr("新建标签", "New tab"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
+		idLANFolder: a.tr("打开收件目录", "Open inbox folder"), idLANMode: a.tr("同一 Wi-Fi", "Same Wi-Fi"), idUDPMode: a.tr("远程 UDP", "Remote UDP"), idWeb: a.tr("网页版", "Web app"), idRemoteListen: a.tr("生成接收码", "Create pairing code"), idRemoteSend: a.tr("发送文件…", "Send file…"), idRemoteStop: a.tr("取消", "Cancel"), idRemoteCopy: a.tr("复制配对码", "Copy code"), idRemoteAccept: a.tr("接收并保存…", "Receive and save…"), idServices: a.tr("切换服务", "Services"), idAdd: a.tr("新建标签", "New tab"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("会话记录", "Conversation"), idFiles: a.tr("文件收件箱", "File inbox"), idTransfers: a.tr("传输队列", "Transfer queue"),
+		idNavWeChat: a.tr("微信", "WeChat"), idNavNearby: a.tr("超级文件直传", "Ultra File LAN"), idNavLocal: "LocalSend", idCover: a.tr("预览封面", "Preview cover"),
 		idDownloads: a.tr("下载目录", "Downloads"), idUpdate: a.tr("检查更新", "Check updates"), idAbout: a.tr("关于", "About"),
 		idRefresh: a.tr("刷新二维码", "Refresh code"), idSave: a.tr("另存为…", "Save as…"), idCopy: a.tr("复制", "Copy"), idRemoveFile: a.tr("移除", "Remove"),
-		idChoose: a.tr("添加文件…", "Add files…"), idSend: a.tr("发送", "Send"), idStop: a.tr("停止队列", "Stop queue"),
+		idChoose: a.tr("添加文件", "Attach files"), idSend: a.tr("发送", "Send"), idStop: a.tr("停止队列", "Stop queue"),
 	} {
 		setText(a.children[id], s)
+	}
+	if a.tab(a.snap.Active).picker {
+		setText(a.children[idServices], a.tr("返回", "Back"))
 	}
 	if a.snap.Update != nil {
 		setText(a.children[idNotice], a.tr("可更新至 ", "Update to ")+a.snap.Update.Version+"  ↗")
 	}
 	setText(a.h, a.tr("超级文件", "Ultra File"))
+	a.labelTooltips()
 }
 func (a *window) refresh(force bool) {
 	a.display(a.c.Snapshot(), force)
@@ -146,8 +163,8 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 	}
 	a.observeTransfers(s)
 	switched := s.Active != a.account.ID
-	if switched && a.account.ID != 0 {
-		a.tab(a.account.ID).peer = getText(a.children[idPeer])
+	if previous := a.services.slots[a.account.ID]; switched && previous != nil {
+		previous.peer = getText(a.children[idPeer])
 	}
 	if switched {
 		setText(a.children[idPeer], a.tab(s.Active).peer)
@@ -159,12 +176,12 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 			a.account = v
 		}
 	}
+	a.filesOnly = a.tab(s.Active).view == idFiles
 	if switched || getText(a.children[idEditor]) != a.drafts[s.Active] {
 		setText(a.children[idEditor], a.drafts[s.Active])
 	}
-	if force || switched {
-		a.historyRows = nil
-		a.queueRows = nil
+	if switched {
+		a.coverImages = nil
 	}
 	a.qr.load(a.account.QR)
 	var titles []string
@@ -201,29 +218,12 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 		}
 	}
 	send.Call(a.children[idTabs], 0x130c, uintptr(activeIndex), 0)
-	var rows, ids []string
-	for _, m := range a.account.Messages {
-		if a.filesOnly && !isAttachment(m) {
-			continue
-		}
-		who := a.tr("手机", "Phone")
-		if m.Outgoing {
-			who = a.tr("此电脑", "This PC")
-		}
-		desc := strings.Join(strings.Fields(m.Text), " ")
-		if m.Kind != "text" && m.Size > 0 {
-			desc += "   ·   " + fileSize(m.Size)
-		}
-		rows = append(rows, time.Unix(m.Timestamp, 0).Format("15:04")+"    "+who+"    "+desc)
-		ids = append(ids, m.ID)
-	}
-	a.messageIDs = ids
-	a.updateList(idHistory, rows, &a.historyRows, true, switched || force)
-	rows = nil
+	a.updateTimeline(switched)
+	var rows []string
 	for _, f := range a.account.Files {
 		rows = append(rows, f.Name+"    ·    "+fileSize(f.Size))
 	}
-	a.updateList(idQueue, rows, &a.queueRows, false, switched || force)
+	a.updateList(idQueue, rows, &a.queueRows, false, switched)
 	a.changeLabels()
 	a.enableActions()
 	a.layout()
@@ -274,6 +274,9 @@ func (a *window) updateList(id int, rows []string, previous *[]string, tail, res
 		send.Call(h, 0x197, top, 0)
 	}
 	send.Call(h, 0x0b, 1, 0)
+	if _, visible := a.placements[id]; !visible {
+		showWindow.Call(h, 0)
+	}
 	redraw(h)
 	*previous = rows
 }
@@ -314,6 +317,7 @@ func (a *window) enableActions() {
 	enabled(a.children[idRemoveFile], ready && int(i) >= 0)
 	m, ok := a.selectedMessage()
 	enabled(a.children[idCopy], ok)
+	enabled(a.children[idCover], ac.SignedIn && ac.Previewing == "" && ok && a.canPreview(m))
 	enabled(a.children[idSave], ac.SignedIn && !ac.Downloading && ok && m.CanDownload())
 	enabled(a.children[idStop], ac.Busy)
 	enabled(a.children[idRefresh], ac.Status != "connecting")
