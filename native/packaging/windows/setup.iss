@@ -55,6 +55,7 @@ Source: "..\..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"
 Source: "..\..\..\licenses\ItChat-MIT.txt"; DestDir: "{app}\licenses"
 Source: "..\..\..\licenses\WXFileHelper-MIT.txt"; DestDir: "{app}\licenses"
 Source: "..\..\..\licenses\go-qrcode-BSD.txt"; DestDir: "{app}\licenses"
+Source: "..\..\..\licenses\native-network-LICENSES.txt"; DestDir: "{app}\licenses"
 Source: "go-license.txt"; DestDir: "{app}\licenses"
 
 [Icons]

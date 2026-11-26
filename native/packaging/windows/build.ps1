@@ -26,7 +26,7 @@ $Iscc = Find-Tool $Iscc "ISCC.exe" @(
     (Join-Path $repo ".tools/inno6/ISCC.exe"),
     "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
 )
-$versionLine = Select-String -LiteralPath (Join-Path $native "internal/desktop/controller.go") -Pattern '^const Version = "(\d+\.\d+\.\d+)"$'
+$versionLine = Select-String -LiteralPath (Join-Path $native "internal/desktop/controller.go") -Pattern '^const Version = "(\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?)"$'
 if (!$versionLine) { throw "Could not read the native application version" }
 $version = $versionLine.Matches[0].Groups[1].Value
 $dist = (New-Item -ItemType Directory -Force -Path (Join-Path $native "dist/windows/$version")).FullName
@@ -86,7 +86,7 @@ try {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $(Split-Path -Leaf $_)"
     } | Set-Content -LiteralPath (Join-Path $dist "SHA256SUMS.txt") -Encoding ascii
-    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/go-qrcode-BSD.txt"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
+    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/go-qrcode-BSD.txt"), (Join-Path $repo "licenses/native-network-LICENSES.txt"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
     Get-Content -LiteralPath $notices | Set-Content -LiteralPath (Join-Path $dist "DEPENDENCY-LICENSES.txt") -Encoding utf8
     Get-ChildItem -LiteralPath $portable,$installer,(Join-Path $dist "SHA256SUMS.txt") | Select-Object FullName,Length
 }
