@@ -276,7 +276,15 @@ func (c *Client) Download(ctx context.Context, msg Message, target string) error
 	if _, err = f.Write(head); err != nil {
 		return err
 	}
-	written, err := io.Copy(f, r.Body)
+	var remaining io.Reader = r.Body
+	if expected >= 0 {
+		if int64(n) > expected {
+			return errIncomplete
+		}
+		// A preview or an ordinary save must not write past its advertised size.
+		remaining = io.LimitReader(r.Body, expected-int64(n)+1)
+	}
+	written, err := io.Copy(f, remaining)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
