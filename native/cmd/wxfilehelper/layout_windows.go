@@ -64,9 +64,10 @@ func (a *window) layout() {
 		btnH = 30
 	}
 	left, right := edge+margin, w-margin
+	put(idServices, right-menuW-113, y+2, 105, btnH)
 	put(idMenu, right-menuW, y+2, menuW, btnH)
 
-	a.caption(a.tr("文件传输助手", "File Transfer"), left, y, right-left-menuW-12, titleH, a.titleFont, ink, singleLine)
+	a.caption(a.tr("超级文件", "Ultra File"), left, y, right-left-menuW-125, titleH, a.titleFont, ink, singleLine)
 	statusInk := muted
 	if a.account.Error != "" {
 		statusInk = color(155, 45, 43)
@@ -78,24 +79,33 @@ func (a *window) layout() {
 	sy := y + titleH + 3
 	a.statusDot = a.box(left+1, sy+7, 7, 7)
 	a.statusInk = statusInk
-	a.caption(a.stateLabel(), left+16, sy, right-left-16, 22, a.smallFont, statusInk, singleLine)
+	state := a.stateLabel()
+	if t := a.tab(a.snap.Active); t.kind != idWeChat {
+		state = a.titleOf(t.kind)
+		statusInk = muted
+		a.statusInk = muted
+	}
+	a.caption(state, left+16, sy, right-left-16, 22, a.smallFont, statusInk, singleLine)
 
 	tabW := 144
 	if w < 690 {
 		tabW = 124
 	}
 	n := len(a.snap.Accounts)
+	tabW = min(tabW, (right-left-32-tabH)/max(1, n))
 	send.Call(a.children[idTabs], 0x1329, 0, uintptr(a.px(tabW))|(uintptr(a.px(tabH-4))<<16))
 	put(idTabs, left, tabsY, tabW*n+26, tabH)
-	if n < 2 {
+	if n < workspaceTabs {
 		put(idAdd, left+tabW*n+31, tabsY, tabH, tabH-2)
 	}
 	a.headerHeight = tabsY + tabH + 9
 
 	if a.rail {
-		a.caption("WX FileHelper", 20, 76, railWidth-38, 29, a.brandFont, ink, singleLine)
-		put(idChat, 12, 129, railWidth-24, 40)
-		put(idFiles, 12, 173, railWidth-24, 40)
+		a.caption("Ultra File", 20, 76, railWidth-38, 29, a.brandFont, ink, singleLine)
+		if t := a.tab(a.snap.Active); t.kind == idWeChat && !t.picker {
+			put(idChat, 12, 129, railWidth-24, 40)
+			put(idFiles, 12, 173, railWidth-24, 40)
+		}
 		put(idDownloads, 12, h-135, railWidth-24, 36)
 		put(idUpdate, 12, h-94, railWidth-24, 36)
 		put(idAbout, 12, h-53, railWidth-24, 36)
@@ -115,7 +125,9 @@ func (a *window) layout() {
 		}
 	}
 	a.contentLeft, a.contentRight, a.contentTop = left, right, top
-	if a.account.SignedIn {
+	if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
+		a.serviceLayout(put, left, right, top, btnH)
+	} else if a.account.SignedIn {
 		a.layoutTransfer(put, left, right, top, btnH)
 	} else {
 		a.layoutLogin(put, left, right, top, btnH)
@@ -272,7 +284,9 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 	}
 	if r := a.qrBounds; r.Right > r.Left {
 		roundedSurface(dc, a.qrCard, a.px(14), white, border)
-		if len(a.qr.pixels) > 0 {
+		if t := a.tab(a.snap.Active); t.kind == idNearby && len(t.pair.pixels) > 0 {
+			t.pair.draw(dc, r, 0)
+		} else if len(a.qr.pixels) > 0 {
 			a.qr.draw(dc, r, a.px(5))
 		} else {
 			text := a.tr("正在获取二维码…", "Requesting code…")

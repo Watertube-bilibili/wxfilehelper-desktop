@@ -145,7 +145,7 @@ func (a *window) ensureIcon(ac desktop.Account) (trayRoute, bool) {
 	n.Flags = 0x87 // MESSAGE | ICON | TIP | SHOWTIP
 	n.Callback = trayMessage
 	n.Icon = a.icon
-	setShellText(n.Tip[:], "WX FileHelper")
+	setShellText(n.Tip[:], "Ultra File")
 	if !shellNotify(0, &n) {
 		return trayRoute{}, false
 	} // NIM_ADD
@@ -354,8 +354,8 @@ func (a *window) trayMenu(account uint64, id uint32, x, y int32) {
 		return
 	}
 	defer user32.NewProc("DestroyMenu").Call(menu)
-	user32.NewProc("AppendMenuW").Call(menu, 0, 1, uintptr(unsafe.Pointer(wide(a.tr("打开文件传输助手", "Open WX FileHelper")))))
-	user32.NewProc("AppendMenuW").Call(menu, 0, idExit, uintptr(unsafe.Pointer(wide(a.tr("退出程序", "Quit WX FileHelper")))))
+	user32.NewProc("AppendMenuW").Call(menu, 0, 1, uintptr(unsafe.Pointer(wide(a.tr("打开超级文件", "Open Ultra File")))))
+	user32.NewProc("AppendMenuW").Call(menu, 0, idExit, uintptr(unsafe.Pointer(wide(a.tr("退出程序", "Quit Ultra File")))))
 	user32.NewProc("SetMenuDefaultItem").Call(menu, 1, 0)
 	if x == -1 && y == -1 {
 		var p point

@@ -59,7 +59,7 @@ func (q *qrBitmap) load(data []byte) {
 	}
 }
 func (a *window) createChildren() error {
-	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice} {
+	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice, idServices, idWeChat, idNearby, idLocal, idQQ, idDefaultService, idHost, idPair, idPeer, idNearSend, idAccept, idReject} {
 		class := "BUTTON"
 		style := uintptr(0x40010000 | 0x0000000b)
 		ex := uintptr(0) // WS_CHILD | WS_TABSTOP, owner drawn button
@@ -72,6 +72,9 @@ func (a *window) createChildren() error {
 		case idHistory, idQueue:
 			class = "LISTBOX"
 			style = 0x40210000 | 0x101 | 0x40 | 0x10 // notifications, fixed owner-drawn rows, accessible strings
+		case idPeer:
+			class = "EDIT"
+			style = 0x40810080
 		case idEditor:
 			class = "EDIT"
 			style = 0x40210000 | 0x4 | 0x40 | 0x1000 // multiline, autovscroll, want return
@@ -87,6 +90,7 @@ func (a *window) createChildren() error {
 			}
 		}
 	}
+	send.Call(a.children[idPeer], 0x1501, 0, uintptr(unsafe.Pointer(wide("LocalSend IP (192.168.1.20)"))))
 	send.Call(a.children[idEditor], 0x00c5, 1024*1024, 0)
 	return nil
 }
@@ -120,7 +124,7 @@ const queueRowHeight = 30
 
 func (a *window) changeLabels() {
 	for id, s := range map[int]string{
-		idAdd: a.tr("添加账号", "Add account"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
+		idServices: a.tr("切换服务", "Services"), idAdd: a.tr("新建标签", "New tab"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("文件传输", "Conversation"), idFiles: a.tr("本次会话文件", "Session files"),
 		idDownloads: a.tr("下载目录", "Downloads"), idUpdate: a.tr("检查更新", "Check updates"), idAbout: a.tr("关于", "About"),
 		idRefresh: a.tr("刷新二维码", "Refresh code"), idSave: a.tr("另存为…", "Save as…"), idCopy: a.tr("复制", "Copy"), idRemoveFile: a.tr("移除", "Remove"),
 		idChoose: a.tr("添加文件…", "Add files…"), idSend: a.tr("发送", "Send"), idStop: a.tr("停止队列", "Stop queue"),
@@ -130,7 +134,7 @@ func (a *window) changeLabels() {
 	if a.snap.Update != nil {
 		setText(a.children[idNotice], a.tr("可更新至 ", "Update to ")+a.snap.Update.Version+"  ↗")
 	}
-	setText(a.h, a.tr("文件传输助手", "File Transfer")+" · WX FileHelper")
+	setText(a.h, a.tr("超级文件", "Ultra File"))
 }
 func (a *window) refresh(force bool) {
 	a.display(a.c.Snapshot(), force)
@@ -142,6 +146,12 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 	}
 	a.observeTransfers(s)
 	switched := s.Active != a.account.ID
+	if switched && a.account.ID != 0 {
+		a.tab(a.account.ID).peer = getText(a.children[idPeer])
+	}
+	if switched {
+		setText(a.children[idPeer], a.tab(s.Active).peer)
+	}
 	a.snap = s
 	for _, v := range s.Accounts {
 		a.reconcileDraft(v)
@@ -167,6 +177,11 @@ func (a *window) display(s desktop.Snapshot, force bool) {
 				r = append(r[:10], '…')
 			}
 			title = string(r)
+		}
+		if kind := a.tab(acct.ID).kind; kind != idWeChat {
+			title = a.titleOf(kind)
+		} else if acct.Name == "" {
+			title = fmt.Sprintf(a.tr("微信 %d", "WeChat %d"), i+1)
 		}
 		if acct.Busy || acct.Downloading {
 			title += " ·"
@@ -294,7 +309,7 @@ func (a *window) enableActions() {
 	enabled(a.children[idChoose], ready)
 	enabled(a.children[idEditor], ready)
 	enabled(a.children[idSend], ready && (len(ac.Files) > 0 || strings.TrimSpace(a.drafts[ac.ID]) != ""))
-	enabled(a.children[idAdd], len(a.snap.Accounts) < 2)
+	enabled(a.children[idAdd], len(a.snap.Accounts) < workspaceTabs)
 	i, _, _ := send.Call(a.children[idQueue], 0x188, 0, 0)
 	enabled(a.children[idRemoveFile], ready && int(i) >= 0)
 	m, ok := a.selectedMessage()

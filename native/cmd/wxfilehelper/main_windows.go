@@ -41,6 +41,8 @@ const (
 )
 
 type window struct {
+	services                                            serviceSpace
+	lastServiceStatus                                   string
 	h, instance, icon                                   uintptr
 	children                                            map[int]uintptr
 	font, smallFont, titleFont, brandFont               uintptr
@@ -86,7 +88,7 @@ func main() {
 		if smoke {
 			fmt.Fprintln(os.Stderr, err)
 		} else {
-			dialog(0, err.Error(), "WX FileHelper", 0x10)
+			dialog(0, err.Error(), "Ultra File", 0x10)
 		}
 		os.Exit(1)
 	}
@@ -136,17 +138,19 @@ func withWindow(use func(*window) error) error {
 	if ok, _, err := user32.NewProc("RegisterClassExW").Call(uintptr(unsafe.Pointer(&class))); ok == 0 {
 		return fmt.Errorf("Register window: %w", err)
 	}
-	c := desktop.New()
+	c := desktop.NewWorkspace(workspaceTabs)
 	defer user32.NewProc("UnregisterClassW").Call(uintptr(unsafe.Pointer(className)), instance)
 	defer c.Close()
 	lang, _, _ := kernel32.NewProc("GetUserDefaultUILanguage").Call()
 	ui = &window{instance: instance, icon: icon, c: c, children: map[int]uintptr{}, drafts: map[uint64]string{}, pending: map[uint64]pendingDraft{}, epochs: map[uint64]uint64{}, english: lang&0x3ff != 4, dpi: 96}
+	ui.initServices()
+	defer ui.closeServices()
 	var work rect
 	user32.NewProc("SystemParametersInfoW").Call(48, 0, uintptr(unsafe.Pointer(&work)), 0)
 	systemDPI := getDPI(0)
 	w := min(1024*systemDPI/96, max(450, int(work.Right-work.Left)-20))
 	h := min(700*systemDPI/96, max(360, int(work.Bottom-work.Top)-20))
-	hwnd, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(wide(ui.tr("文件传输助手", "File Transfer")+" · WX FileHelper"))),
+	hwnd, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(wide(ui.tr("超级文件", "Ultra File")))),
 		0x02cf0000, uintptr(int(work.Left)+(int(work.Right-work.Left)-w)/2), uintptr(int(work.Top)+(int(work.Bottom-work.Top)-h)/2), uintptr(w), uintptr(h), 0, 0, instance, 0)
 	if hwnd == 0 {
 		return fmt.Errorf("Create window: %w", err)
@@ -177,7 +181,7 @@ func (a *window) eventLoop(background bool) error {
 	}
 	user32.NewProc("SetTimer").Call(hwnd, 1, 200, 0)
 	c.StartUpdateChecks()
-	a.fail(c.Start(a.snap.Active))
+	a.startTab(a.snap.Active)
 	var m message
 	for {
 		ok, _, err := user32.NewProc("GetMessageW").Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
@@ -270,6 +274,7 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			redraw(h)
 			return 0
 		case 0x113:
+			a.pollServices()
 			if a.tray.activation != 0 {
 				if signal, _, _ := kernel32.NewProc("WaitForSingleObject").Call(a.tray.activation, 0); signal == 0 {
 					a.restoreWindow(0)
@@ -334,6 +339,10 @@ func windowProc(h uintptr, msg uint32, w, l uintptr) uintptr {
 			}
 			return 1
 		case 0x233:
+			if t := a.tab(a.snap.Active); t.picker || t.kind != idWeChat {
+				shell32.NewProc("DragFinish").Call(w)
+				return 0
+			}
 			paths, err := droppedFiles(w)
 			shell32.NewProc("DragFinish").Call(w)
 			if err == nil && len(paths) > 0 {
@@ -380,7 +389,7 @@ func (a *window) confirmClose() bool {
 			if visible, _, _ := user32.NewProc("IsWindowVisible").Call(a.h); visible == 0 {
 				a.restoreWindow(0)
 			}
-			return dialog(a.h, a.tr("还有传输或未发送的内容。现在退出？", "You have a transfer or unsent items. Exit now?"), "WX FileHelper", 0x124) == 6
+			return dialog(a.h, a.tr("还有传输或未发送的内容。现在退出？", "You have a transfer or unsent items. Exit now?"), "Ultra File", 0x124) == 6
 		}
 	}
 	return true

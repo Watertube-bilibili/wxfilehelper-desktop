@@ -110,6 +110,13 @@ func (a *window) drawButton(d *drawItem) {
 	}
 	fill(d.DC, r, surface)
 	roundedSurface(d.DC, r, a.px(6), bg, stroke)
+	if icon := a.services.logos[id]; icon != nil && len(icon.pixels) > 0 {
+		b := r
+		b.Left += int32(a.px(12))
+		b.Right = b.Left + (r.Bottom - r.Top)
+		icon.draw(d.DC, b, a.px(4))
+		r.Left = b.Right
+	}
 	side := int32(a.px(17))
 	cy := (r.Top + r.Bottom - side) / 2
 	if id == idAdd || id == idMenu {
