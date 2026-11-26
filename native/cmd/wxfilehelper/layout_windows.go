@@ -3,6 +3,8 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"time"
 	"unsafe"
 )
 
@@ -36,10 +38,16 @@ func (a *window) layout() {
 	a.w, a.hgt = int(r.Right)*96/a.dpi, int(r.Bottom)*96/a.dpi
 	w, h := a.w, a.hgt
 	a.rail = w >= 880 && h >= 490
+	dest := 52
+	if a.rail {
+		dest = railWidth
+	}
+	a.animate(&a.motion.rail, float64(dest), 180*time.Millisecond)
 	edge := a.sidebarWidth()
 	planned := map[int]rect{}
 	put := func(id, x, y, width, height int) { planned[id] = a.box(x, y, max(1, width), max(1, height)) }
 	a.labels = nil
+	a.directHero = rect{}
 	a.qrBounds, a.qrCard, a.composer, a.queueSurface, a.statusDot = rect{}, rect{}, rect{}, rect{}, rect{}
 	t := a.tab(a.snap.Active)
 	margin, buttonH, stripH, titleY := 24, 34, 46, 58
@@ -161,6 +169,7 @@ func (a *window) layout() {
 		}
 	}
 	a.placements = planned
+	a.placeOfficial()
 	a.updateEditorScroll()
 }
 
@@ -203,6 +212,9 @@ func (a *window) layoutLogin(put positionControl, left, right, top, btnH int) {
 }
 
 func (a *window) sidebarWidth() int {
+	if a.motion.rail.initialized {
+		return int(math.Round(a.motion.rail.value(time.Now())))
+	}
 	if a.rail {
 		return railWidth
 	}
@@ -303,13 +315,13 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 	edge := a.sidebarWidth()
 	fill(dc, a.box(0, 0, edge, a.hgt), railBG)
 	fill(dc, a.box(edge-1, 0, 1, a.hgt), border)
-	size, x, y := 34, 20, 27
+	size, x, y := 40, 16, 22
 	if !a.rail {
-		size, x, y = 28, 12, 15
+		size, x, y = 32, 10, 12
 	}
 	logo := a.box(x, y, size, size)
-	if icon := a.services.logos[idNearby]; icon != nil && len(icon.pixels) > 0 {
-		icon.draw(dc, logo, 0)
+	if icon := a.services.logos[idNearby]; icon != nil && icon.image != nil {
+		icon.drawOn(dc, logo, railBG)
 	}
 	side := int32(a.px(15))
 	x = 22
@@ -337,6 +349,13 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 	}
 	if a.queueSurface.Right > a.queueSurface.Left {
 		roundedSurface(dc, a.queueSurface, a.px(7), base, border)
+	}
+	if r := a.directHero; r.Right > r.Left {
+		roundedSurface(dc, r, a.px(10), accentWash, border)
+		side := int32(a.px(28))
+		x := r.Left + int32(a.px(12))
+		y := (r.Top + r.Bottom - side) / 2
+		a.glyph(dc, "monitor", x, y, side, accent)
 	}
 	for _, label := range a.labels {
 		textAt(dc, label.text, label.box, label.font, label.ink, label.flags)

@@ -276,6 +276,10 @@ func (a *window) menu() {
 func (a *window) stateLabel() string {
 	if t := a.tab(a.snap.Active); t.picker {
 		return a.tr("选择此标签的服务", "Choose a service for this tab")
+	} else if t.kind == idNearby && t.direct.remoteMode {
+		return a.remoteText(t.direct.last)
+	} else if t.kind == idLocal {
+		return a.officialStatus()
 	} else if t.kind != idWeChat {
 		if s := t.servers[t.kind]; s != nil {
 			return a.tr("局域网已启用", "LAN enabled") + " · " + s.URL
@@ -296,6 +300,8 @@ func (a *window) stateLabel() string {
 		return a.tr("正在发送…", "Sending…")
 	}
 	switch ac.Status {
+	case "renewing":
+		return a.tr("二维码已过期，正在自动刷新…", "Refreshing the expired sign-in code…")
 	case "connecting":
 		return a.tr("正在连接微信…", "Connecting to WeChat…")
 	case "scan":

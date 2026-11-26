@@ -58,4 +58,5 @@ func paintTabStrip(h, dc uintptr) {
 		}
 		ui.drawTab(&item)
 	}
+	ui.tabUnderline(dc, h, client)
 }

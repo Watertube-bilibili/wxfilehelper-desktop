@@ -3,6 +3,7 @@ package main
 
 import (
 	"strings"
+	"time"
 	"unicode"
 	"unsafe"
 )
@@ -100,10 +101,13 @@ func (a *window) drawButton(d *drawItem) {
 	}
 	t := a.tab(a.snap.Active)
 	selected := !t.picker && t.kind == idWeChat && id == t.view
+	if id == idLANMode && !t.direct.remoteMode || id == idUDPMode && t.direct.remoteMode {
+		selected = true
+	}
 	if selected || id == idNotice {
 		bg, fg, stroke = accentWash, accent, 0
 	}
-	primary := id == idSend || id == idRefresh || id == idHost || id == idNearSend || id == idAccept
+	primary := id == idSend || id == idRefresh || id == idHost || id == idNearSend || id == idAccept || id == idRemoteListen || id == idRemoteSend || id == idRemoteAccept || id == idOfficial
 	if primary {
 		bg, fg, stroke = accent, white, 0
 	}
@@ -118,12 +122,12 @@ func (a *window) drawButton(d *drawItem) {
 		} else {
 			bg = color(212, 228, 218)
 		}
-	} else if a.hot == id {
+	} else if v := a.motion.hover[id]; v != nil {
+		hover := color(226, 236, 227)
 		if primary {
-			bg = color(28, 89, 68)
-		} else {
-			bg = color(226, 236, 227)
+			hover = color(28, 89, 68)
 		}
+		bg = blend(bg, hover, v.value(time.Now()))
 	}
 	if d.State&0x10 != 0 && d.State&0x200 == 0 {
 		stroke = accent
@@ -157,8 +161,8 @@ func (a *window) drawButton(d *drawItem) {
 			x = (r.Left + r.Right - side) / 2
 		}
 		cy = (r.Top + r.Bottom - side) / 2
-		if icon := a.services.logos[logo]; icon != nil && len(icon.pixels) > 0 {
-			icon.draw(d.DC, rect{x, cy, x + side, cy + side}, 0)
+		if icon := a.services.logos[logo]; icon != nil && icon.image != nil {
+			icon.drawOn(d.DC, rect{x, cy, x + side, cy + side}, bg)
 		}
 		if rail && !a.rail {
 			if kind == t.kind && !t.picker {
@@ -213,14 +217,16 @@ func (a *window) drawTab(d *drawItem) {
 		roundedSurface(d.DC, r, a.px(6), base, stroke)
 		tone = ink
 	}
-	if current {
-		fill(d.DC, rect{r.Left, r.Bottom - int32(a.px(2)), r.Right, r.Bottom}, accent)
-	}
+
 	side := int32(a.px(16))
 	x := r.Left + int32(a.px(9))
 	cy := (r.Top + r.Bottom - side) / 2
-	if icon := a.services.logos[a.tab(ac.ID).kind]; icon != nil && len(icon.pixels) > 0 {
-		icon.draw(d.DC, rect{x, cy, x + side, cy + side}, 0)
+	if icon := a.services.logos[a.tab(ac.ID).kind]; icon != nil && icon.image != nil {
+		tabFill := tabBG
+		if current {
+			tabFill = base
+		}
+		icon.drawOn(d.DC, rect{x, cy, x + side, cy + side}, tabFill)
 	}
 	r.Left = x + side + int32(a.px(6))
 	r.Right -= int32(a.px(4))

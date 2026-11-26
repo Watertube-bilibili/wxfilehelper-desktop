@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/nearby"
@@ -33,6 +32,7 @@ const workspaceTabs = 4
 var icons embed.FS
 
 type serviceTab struct {
+	direct  directState
 	kind    int
 	view    int
 	picker  bool
@@ -41,7 +41,6 @@ type serviceTab struct {
 	peer    string
 	status  string
 	running bool
-	cancel  context.CancelFunc
 }
 type completion struct {
 	tab  *serviceTab
@@ -50,7 +49,7 @@ type completion struct {
 }
 type serviceSpace struct {
 	slots     map[uint64]*serviceTab
-	logos     map[int]*qrBitmap
+	logos     map[int]*serviceIcon
 	defaultID int
 	completed chan completion
 	done      chan struct{}
@@ -58,7 +57,7 @@ type serviceSpace struct {
 }
 
 func (a *window) initServices() {
-	a.services = serviceSpace{slots: map[uint64]*serviceTab{}, logos: map[int]*qrBitmap{}, defaultID: idWeChat, completed: make(chan completion, 32), done: make(chan struct{})}
+	a.services = serviceSpace{slots: map[uint64]*serviceTab{}, logos: map[int]*serviceIcon{}, defaultID: idWeChat, completed: make(chan completion, 32), done: make(chan struct{})}
 	if b, e := os.ReadFile(prefFile()); e == nil {
 		for id, name := range serviceKeys {
 			if string(b) == name {
@@ -68,7 +67,7 @@ func (a *window) initServices() {
 	}
 	for id, name := range serviceKeys {
 		if b, e := icons.ReadFile("icons/" + name + ".png"); e == nil {
-			q := new(qrBitmap)
+			q := new(serviceIcon)
 			q.load(b)
 			a.services.logos[id] = q
 		}
@@ -102,8 +101,8 @@ func (a *window) titleOf(id int) string {
 	return a.tr("微信文件传输助手", "WeChat File Transfer")
 }
 func (t *serviceTab) close() {
-	if t.cancel != nil {
-		t.cancel()
+	if t.direct.session != nil {
+		t.direct.session.Close()
 	}
 	for _, s := range t.servers {
 		s.Close()
@@ -118,6 +117,9 @@ func (a *window) closeServices() {
 	})
 }
 func (a *window) startTab(id uint64) {
+	if a.tab(id).kind == idLocal {
+		a.maybeOfficial()
+	}
 	if a.tab(id).kind == idWeChat {
 		a.fail(a.c.Start(id))
 	}
@@ -132,50 +134,11 @@ func (a *window) serviceLayout(put positionControl, left, right, top, btn int) {
 		}
 		return
 	}
-	s := t.servers[t.kind]
-	if t.kind != a.services.defaultID {
-		put(idDefaultService, right-146, top, 146, btn)
-		setText(a.children[idDefaultService], a.tr("设为启动默认", "Use at startup"))
-	}
-	if s == nil {
-		put(idHost, left, top, 196, btn)
-		setText(a.children[idHost], a.tr("启用局域网连接", "Enable LAN transfer"))
+	if t.kind == idLocal {
+		a.officialLayout(put, left, right, top, btn)
 		return
 	}
-	if t.kind != a.services.defaultID {
-		top += btn + 6
-	}
-	if t.kind == idNearby {
-		size := min(190, max(80, a.hgt-top-btn*2-36))
-		a.qrBounds = a.box(left, top, size, size)
-		a.caption(a.tr("用超级文件安卓版扫描配对", "Scan in Ultra File for Android"), left+size+10, top, w-size-10, 48, a.font, ink, 0x10)
-		put(idPair, left+size+10, top+53, min(w-size-10, 146), btn)
-		setText(a.children[idPair], a.tr("复制配对信息", "Copy pairing link"))
-		top += size + 7
-	} else {
-		a.caption(s.URL, left, top, w, 23, a.font, ink, singleLine)
-		top += 27
-		put(idPeer, left, top, min(w-160, 270), btn)
-		top += btn + 7
-	}
-	put(idNearSend, left, top, 169, btn)
-	setText(a.children[idNearSend], a.tr("选择发送文件…", "Choose a file…"))
-	enabled(a.children[idNearSend], !t.running)
-	top += btn + 4
-	status := t.status
-	if status == "" {
-		status = s.Status()
-	}
-	if p := s.Pending(); p != "" {
-		a.caption(p, left, top, w, 23, a.font, ink, singleLine)
-		top += 24
-		put(idAccept, left, top, 85, btn)
-		put(idReject, left+92, top, 85, btn)
-		setText(a.children[idAccept], a.tr("接收", "Accept"))
-		setText(a.children[idReject], a.tr("拒绝", "Decline"))
-	} else {
-		a.caption(status, left, top, w, 32, a.smallFont, muted, singleLine)
-	}
+	a.directLayout(put, left, right, top, btn)
 }
 func (a *window) pollServices() {
 	for _, account := range a.snap.Accounts {
@@ -217,6 +180,9 @@ func (a *window) pollServices() {
 	}
 }
 func (a *window) serviceCommand(id int) bool {
+	if a.directCommand(id) {
+		return true
+	}
 	t := a.tab(a.snap.Active)
 	switch id {
 	case idNavWeChat, idNavNearby, idNavLocal:
@@ -245,6 +211,8 @@ func (a *window) serviceCommand(id int) bool {
 			}
 		}
 		t.picker = false
+	case idOfficial:
+		a.startOfficial()
 	case idServices:
 		t.picker = !t.picker
 	case idWeChat, idNearby, idLocal:
@@ -285,7 +253,7 @@ func (a *window) serviceCommand(id int) bool {
 			}
 			ip = addrs[n-1]
 		}
-		s, e := nearby.Start(ip, t.kind == idLocal, filepath.Join(downloadsDirectory(), "Ultra File"))
+		s, e := nearby.Start(ip, false, filepath.Join(downloadsDirectory(), "Ultra File"))
 		if e != nil {
 			a.fail(e)
 			return true
@@ -304,7 +272,7 @@ func (a *window) serviceCommand(id int) bool {
 		if s == nil || t.running {
 			return true
 		}
-		addr := strings.TrimSpace(getText(a.children[idPeer]))
+
 		paths, e := fileDialog(a.h, a.tr("选择一个文件", "Choose one file"), "", a.lastDir, false)
 		if e != nil {
 			a.fail(e)
@@ -319,31 +287,19 @@ func (a *window) serviceCommand(id int) bool {
 		}
 		t.running = true
 		t.status = a.tr("处理中…", "Working…")
-		ctx, cancel := context.WithCancel(context.Background())
-		t.cancel = cancel
 		kind := t.kind
-		hwnd := a.h
 		go func() {
-			defer cancel()
-			var err error
-			if kind == idNearby {
-				err = s.Share(paths[0])
-			} else {
-				err = s.SendLocal(ctx, addr, paths[0], func(pin string) bool {
-					return dialog(hwnd, "接收设备 / Receiver: "+addr+"\nSHA-256: "+pin+"\n发送文件 / Send file?", "LocalSend", 0x124) == 6
-				})
-			}
+			err := s.Share(paths[0])
 			select {
 			case a.services.completed <- completion{t, kind, err}:
 			case <-a.services.done:
 			}
 		}()
-	case idAccept, idReject:
-		if s := t.servers[idLocal]; s != nil {
-			s.Decide(id == idAccept)
-		}
 	default:
 		return false
+	}
+	if t.kind == idLocal && !t.picker {
+		a.maybeOfficial()
 	}
 	a.refresh(true)
 	return true
