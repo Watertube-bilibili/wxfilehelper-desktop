@@ -28,6 +28,20 @@ const ArchiveBytes int64 = 26092132
 const digest = "1b131a225e30bb46c7b4ffee23577716b2d0605108aded27899375033ff69abc"
 const archiveURL = "https://github.com/localsend/localsend/releases/download/v" + Version + "/" + archiveName
 
+// ArchiveSource also supports a portable copy with the official ZIP alongside it.
+func ArchiveSource() (path string, local bool) {
+	if exe, err := os.Executable(); err == nil {
+		root := filepath.Dir(exe)
+		for _, dir := range []string{filepath.Join(root, "components", "LocalSend"), root} {
+			path := filepath.Join(dir, archiveName)
+			if f, err := os.Stat(path); err == nil && f.Mode().IsRegular() {
+				return path, true
+			}
+		}
+	}
+	return archiveURL, false
+}
+
 func cacheDir() (string, error) {
 	d, e := os.UserCacheDir()
 	if e != nil {
@@ -80,13 +94,14 @@ func Prepare(ctx context.Context, progress func(int64)) (string, error) {
 	defer os.RemoveAll(stage)
 	zipPath := filepath.Join(stage, "archive.zip")
 	var source io.ReadCloser
-	if path, e := os.Executable(); e == nil {
-		if f, e := os.Open(filepath.Join(filepath.Dir(path), archiveName)); e == nil {
-			source = f
+	path, local := ArchiveSource()
+	if local {
+		source, err = os.Open(path)
+		if err != nil {
+			return "", err
 		}
-	}
-	if source == nil {
-		req, e := http.NewRequestWithContext(ctx, "GET", archiveURL, nil)
+	} else {
+		req, e := http.NewRequestWithContext(ctx, "GET", path, nil)
 		if e != nil {
 			return "", e
 		}
