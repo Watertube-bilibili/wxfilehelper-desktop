@@ -211,6 +211,17 @@ func (a *window) serviceCommand(id int) bool {
 			}
 		}
 		t.picker = false
+	case idPickOfficial:
+		paths, err := fileDialog(a.h, a.tr("选择官方便携版的 localsend_app.exe", "Select the official portable localsend_app.exe"), "localsend_app.exe", a.lastDir, false)
+		if err != nil {
+			a.fail(err)
+			return true
+		}
+		if len(paths) == 1 {
+			a.selectOfficial(paths[0])
+		}
+	case idGetZIP:
+		a.fail(openTarget(a.h, "https://github.com/localsend/localsend/releases/download/v1.19.0/LocalSend-1.19.0-windows-x86-64.zip"))
 	case idOfficial:
 		a.startOfficial()
 	case idServices:

@@ -48,6 +48,8 @@ func (a *window) layout() {
 	put := func(id, x, y, width, height int) { planned[id] = a.box(x, y, max(1, width), max(1, height)) }
 	a.labels = nil
 	a.directHero = rect{}
+	a.directCards = nil
+	a.directProgress = rect{}
 	a.qrBounds, a.qrCard, a.composer, a.queueSurface, a.statusDot = rect{}, rect{}, rect{}, rect{}, rect{}
 	t := a.tab(a.snap.Active)
 	margin, buttonH, stripH, titleY := 24, 34, 46, 58
@@ -356,6 +358,17 @@ func (a *window) drawSurface(dc uintptr, bounds rect) {
 		x := r.Left + int32(a.px(12))
 		y := (r.Top + r.Bottom - side) / 2
 		a.glyph(dc, "monitor", x, y, side, accent)
+	}
+	for _, card := range a.directCards {
+		roundedSurface(dc, card, a.px(9), white, border)
+	}
+	if bar := a.directProgress; bar.Right > bar.Left {
+		roundedSurface(dc, bar, a.px(3), accentWash, 0)
+		s := a.tab(a.snap.Active).direct.last
+		if s.Size > 0 && s.Done > 0 {
+			bar.Right = bar.Left + int32(int64(bar.Right-bar.Left)*s.Done/s.Size)
+			roundedSurface(dc, bar, a.px(3), accent, 0)
+		}
 	}
 	for _, label := range a.labels {
 		textAt(dc, label.text, label.box, label.font, label.ink, label.flags)

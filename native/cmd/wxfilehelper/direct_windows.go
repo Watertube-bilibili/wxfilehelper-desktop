@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"github.com/Watertube-bilibili/wxfilehelper-desktop/native/internal/remote"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -73,9 +74,25 @@ func (a *window) directLayout(put positionControl, left, right, top, btn int) {
 	a.caption(title, left+side+15, top+3, w-side-24, hero/2+5, a.brandFont, ink, singleLine)
 	a.caption(detail, left+side+15, top+hero/2, w-side-24, hero/2-2, a.smallFont, muted, singleLine)
 	top += hero + 9
+	wide := w >= 540 && a.hgt-top >= 172
+	cardWidth := (w - 12) / 2
+	card := func(x int, heading, helper string) {
+		a.directCards = append(a.directCards, a.box(x, top, cardWidth, 158))
+		a.caption(heading, x+17, top+12, cardWidth-34, 30, a.brandFont, ink, singleLine)
+		a.caption(helper, x+17, top+49, cardWidth-34, 46, a.smallFont, muted, 0x10)
+	}
 	if !d.remoteMode {
 		s := t.servers[idNearby]
 		if s == nil {
+			if wide {
+				x := left + cardWidth + 12
+				card(left, a.tr("配对手机", "Pair a phone"), a.tr("开启连接后，用安卓端扫描二维码。", "Enable the connection and scan its QR on Android."))
+				card(x, a.tr("收到的文件", "Received files"), a.tr("局域网收件保存在下载目录的 Ultra File 文件夹。", "LAN files are saved in Downloads / Ultra File."))
+				put(idHost, left+17, top+108, min(cardWidth-34, 182), btn)
+				setText(a.children[idHost], a.tr("启用局域网连接", "Enable LAN transfer"))
+				put(idLANFolder, x+17, top+108, min(cardWidth-34, 177), btn)
+				return
+			}
 			a.caption(a.tr("配对后可以双向传文件。", "Pair your phone to send and receive files."), left+3, top, w-6, 28, a.font, ink, singleLine)
 			put(idHost, left, top+33, min(196, w), btn)
 			setText(a.children[idHost], a.tr("启用局域网连接", "Enable LAN transfer"))
@@ -104,6 +121,15 @@ func (a *window) directLayout(put positionControl, left, right, top, btn int) {
 			a.caption(a.remoteText(st), left+2, top, w-4, 26, a.smallFont, muted, singleLine)
 			top += 28
 		}
+		if wide {
+			x := left + cardWidth + 12
+			card(left, a.tr("在此设备接收", "Receive on this device"), a.tr("生成配对码后发给对方，收到文件邀请时确认。", "Share a pairing code, then accept the incoming file."))
+			card(x, a.tr("发往其他设备", "Send to another device"), a.tr("输入接收方的 12 位配对码。", "Enter the receiver’s 12-character code."))
+			put(idRemoteListen, left+17, top+108, min(cardWidth-34, 179), btn)
+			put(idPeer, x+17, top+72, cardWidth-34, 28)
+			put(idRemoteSend, x+17, top+110, min(145, cardWidth-34), btn)
+			return
+		}
 		put(idRemoteListen, left, top, min(185, w), btn)
 		top += btn + 8
 		a.caption(a.tr("对方的接收码", "Receiver’s pairing code"), left+2, top, w, 22, a.smallFont, muted, singleLine)
@@ -129,12 +155,13 @@ func (a *window) directLayout(put positionControl, left, right, top, btn int) {
 		if st.State == "incoming" {
 			put(idRemoteAccept, left, top, min(173, w), btn)
 		} else {
+			a.directProgress = a.box(left+2, top+29, w-4, 5)
 			a.caption(fmt.Sprintf("%s / %s", fileSize(st.Done), fileSize(st.Size)), left+2, top, w-4, 24, a.smallFont, muted, singleLine)
 		}
 	}
 }
 func (a *window) directCommand(id int) bool {
-	if id < idLANMode || id > idRemoteAccept {
+	if id < idLANMode || id > idLANFolder {
 		return false
 	}
 	t := a.tab(a.snap.Active)
@@ -144,6 +171,13 @@ func (a *window) directCommand(id int) bool {
 		d.remoteMode = false
 	case idUDPMode:
 		d.remoteMode = true
+	case idLANFolder:
+		folder := filepath.Join(downloadsDirectory(), "Ultra File")
+		e := os.MkdirAll(folder, 0700)
+		if e == nil {
+			e = openTarget(a.h, folder)
+		}
+		a.fail(e)
 	case idWeb:
 		a.fail(openTarget(a.h, webURL))
 	case idRemoteStop:

@@ -52,9 +52,14 @@ const (
 	idRemoteStop
 	idRemoteCopy
 	idRemoteAccept
+	idLANFolder
+	idPickOfficial
+	idGetZIP
 )
 
 type window struct {
+	directCards                                         []rect
+	directProgress                                      rect
 	motion                                              motionState
 	directHero                                          rect
 	services                                            serviceSpace

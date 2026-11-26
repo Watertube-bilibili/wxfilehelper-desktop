@@ -59,7 +59,8 @@ func ownLocalProcess(pid int) windows.Handle {
 	windows.CloseHandle(job)
 	return 0
 }
-func (a *window) startOfficial() {
+func (a *window) startOfficial() { a.selectOfficial("") }
+func (a *window) selectOfficial(existing string) {
 	h := &a.local
 	if h.loading || h.cmd != nil {
 		return
@@ -72,7 +73,13 @@ func (a *window) startOfficial() {
 	h.progress.Store(0)
 	done := h.ready
 	go func() {
-		path, e := localsendui.Prepare(ctx, func(total int64) { h.progress.Store(total) })
+		var path string
+		var e error
+		if existing != "" {
+			path, e = localsendui.Select(ctx, existing)
+		} else {
+			path, e = localsendui.Prepare(ctx, func(total int64) { h.progress.Store(total) })
+		}
 		done <- localResult{path, e}
 	}()
 }
@@ -257,7 +264,11 @@ func (a *window) officialLayout(put positionControl, left, right, top, btn int) 
 	}
 	w := right - left
 	a.caption("LocalSend", left, top+8, w, 42, a.titleFont, ink, singleLine)
-	a.caption(a.tr("原版的接收、发送和设置将在此标签中打开。", "Use the original Receive, Send and Settings screens in this tab."), left, top+55, w, 44, a.font, muted, 0x10)
+	description := a.tr("原版的接收、发送和设置将在此标签中打开。", "Use the original Receive, Send and Settings screens in this tab.")
+	if a.local.status != "" && a.local.cmd == nil {
+		description = a.tr("如果组件无法打开，请解压官方 ZIP，再选择其中的 localsend_app.exe。", "If the component cannot open, extract the official ZIP and choose its localsend_app.exe.")
+	}
+	a.caption(description, left, top+55, w, 50, a.font, muted, 0x10)
 	if a.local.loading || a.local.cmd != nil {
 		return
 	}
@@ -267,4 +278,11 @@ func (a *window) officialLayout(put positionControl, left, right, top, btn int) 
 	}
 	put(idOfficial, left, top+112, min(260, w), btn+4)
 	setText(a.children[idOfficial], title)
+	next := top + btn + 123
+	put(idPickOfficial, left, next, min(w/2-3, 205), btn)
+	setText(a.children[idPickOfficial], a.tr("选择已解压的原版", "Choose extracted app"))
+	if !localsendui.Ready() {
+		put(idGetZIP, left+min(w/2-3, 205)+6, next, min(w/2-4, 167), btn)
+		setText(a.children[idGetZIP], a.tr("下载官方 ZIP", "Download official ZIP"))
+	}
 }

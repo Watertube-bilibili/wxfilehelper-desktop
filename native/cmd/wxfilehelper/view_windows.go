@@ -59,7 +59,7 @@ func (q *qrBitmap) load(data []byte) {
 	}
 }
 func (a *window) createChildren() error {
-	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice, idServices, idWeChat, idNearby, idLocal, idDefaultService, idHost, idPair, idPeer, idNearSend, idTransfers, idCover, idNavWeChat, idNavNearby, idNavLocal, idOfficial, idLANMode, idUDPMode, idWeb, idRemoteListen, idRemoteSend, idRemoteStop, idRemoteCopy, idRemoteAccept} {
+	for _, id := range []int{idTabs, idAdd, idMenu, idChat, idFiles, idDownloads, idUpdate, idAbout, idRefresh, idHistory, idSave, idCopy, idQueue, idRemoveFile, idEditor, idChoose, idSend, idStop, idNotice, idServices, idWeChat, idNearby, idLocal, idDefaultService, idHost, idPair, idPeer, idNearSend, idTransfers, idCover, idNavWeChat, idNavNearby, idNavLocal, idOfficial, idLANMode, idUDPMode, idWeb, idRemoteListen, idRemoteSend, idRemoteStop, idRemoteCopy, idRemoteAccept, idLANFolder, idPickOfficial, idGetZIP} {
 		class := "BUTTON"
 		style := uintptr(0x40010000 | 0x0000000b)
 		ex := uintptr(0) // WS_CHILD | WS_TABSTOP, owner drawn button
@@ -136,7 +136,7 @@ const queueRowHeight = 30
 
 func (a *window) changeLabels() {
 	for id, s := range map[int]string{
-		idLANMode: a.tr("同一 Wi-Fi", "Same Wi-Fi"), idUDPMode: a.tr("远程 UDP", "Remote UDP"), idWeb: a.tr("网页版", "Web app"), idRemoteListen: a.tr("生成接收码", "Create pairing code"), idRemoteSend: a.tr("发送文件…", "Send file…"), idRemoteStop: a.tr("取消", "Cancel"), idRemoteCopy: a.tr("复制配对码", "Copy code"), idRemoteAccept: a.tr("接收并保存…", "Receive and save…"), idServices: a.tr("切换服务", "Services"), idAdd: a.tr("新建标签", "New tab"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("会话记录", "Conversation"), idFiles: a.tr("文件收件箱", "File inbox"), idTransfers: a.tr("传输队列", "Transfer queue"),
+		idLANFolder: a.tr("打开收件目录", "Open inbox folder"), idLANMode: a.tr("同一 Wi-Fi", "Same Wi-Fi"), idUDPMode: a.tr("远程 UDP", "Remote UDP"), idWeb: a.tr("网页版", "Web app"), idRemoteListen: a.tr("生成接收码", "Create pairing code"), idRemoteSend: a.tr("发送文件…", "Send file…"), idRemoteStop: a.tr("取消", "Cancel"), idRemoteCopy: a.tr("复制配对码", "Copy code"), idRemoteAccept: a.tr("接收并保存…", "Receive and save…"), idServices: a.tr("切换服务", "Services"), idAdd: a.tr("新建标签", "New tab"), idMenu: a.tr("更多操作", "More actions"), idChat: a.tr("会话记录", "Conversation"), idFiles: a.tr("文件收件箱", "File inbox"), idTransfers: a.tr("传输队列", "Transfer queue"),
 		idNavWeChat: a.tr("微信", "WeChat"), idNavNearby: a.tr("超级文件直传", "Ultra File LAN"), idNavLocal: "LocalSend", idCover: a.tr("预览封面", "Preview cover"),
 		idDownloads: a.tr("下载目录", "Downloads"), idUpdate: a.tr("检查更新", "Check updates"), idAbout: a.tr("关于", "About"),
 		idRefresh: a.tr("刷新二维码", "Refresh code"), idSave: a.tr("另存为…", "Save as…"), idCopy: a.tr("复制", "Copy"), idRemoveFile: a.tr("移除", "Remove"),
