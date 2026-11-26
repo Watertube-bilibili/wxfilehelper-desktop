@@ -1,6 +1,7 @@
 param(
     [string]$Go = "",
     [string]$Iscc = "",
+    [string]$Upx = "",
     [switch]$Verify
 )
 
@@ -28,10 +29,10 @@ $Iscc = Find-Tool $Iscc "ISCC.exe" @(
 $versionLine = Select-String -LiteralPath (Join-Path $native "internal/desktop/controller.go") -Pattern '^const Version = "(\d+\.\d+\.\d+)"$'
 if (!$versionLine) { throw "Could not read the native application version" }
 $version = $versionLine.Matches[0].Groups[1].Value
-$dist = (New-Item -ItemType Directory -Force -Path (Join-Path $native "dist/windows")).FullName
+$dist = (New-Item -ItemType Directory -Force -Path (Join-Path $native "dist/windows/$version")).FullName
 $scratch = (New-Item -ItemType Directory -Force -Path (Join-Path $native "build/windows")).FullName
-$portable = Join-Path $dist "WXFileHelper-$version-Windows-x64-Portable.exe"
-$installer = Join-Path $dist "WXFileHelper-$version-Windows-x64-Setup.exe"
+$portable = Join-Path $dist "UltraFile-$version-Windows-x64-Portable.exe"
+$installer = Join-Path $dist "UltraFile-$version-Windows-x64-Setup.exe"
 $obj = Join-Path $native "cmd/wxfilehelper/app_windows_amd64.syso"
 $savedCgo = $env:CGO_ENABLED
 $savedGOOS = $env:GOOS
@@ -64,7 +65,7 @@ try {
     $goRoot = (& $Go env GOROOT).Trim()
     if ($LASTEXITCODE -ne 0 -or !$goRoot) { throw "Could not find the Go license" }
     Copy-Item -LiteralPath (Join-Path $goRoot "LICENSE") -Destination (Join-Path $PSScriptRoot "go-license.txt") -Force
-    $process = Start-Process -FilePath $Iscc -ArgumentList @("/DAppVersion=$version", "setup.iss") `
+    $process = Start-Process -FilePath $Iscc -ArgumentList @("/DAppVersion=$version", "/DAppHash=$((Get-FileHash $portable).Hash)", "setup.iss") `
         -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -Wait -PassThru `
         -RedirectStandardOutput (Join-Path $scratch "iscc.log") -RedirectStandardError (Join-Path $scratch "iscc-error.log")
     if ($process.ExitCode -ne 0) {
@@ -74,11 +75,18 @@ try {
     if ($Verify) {
         & "$PSScriptRoot/smoke.ps1" -Executable $installer -VerifyShortcuts
     }
+    if ($Upx) {
+        & $Upx --best --lzma $portable
+        if ($LASTEXITCODE -ne 0) { throw "Portable compression failed" }
+        & $Upx -t $portable
+        if ($LASTEXITCODE -ne 0) { throw "Portable integrity check failed" }
+        if ($Verify) { & "$PSScriptRoot/smoke.ps1" -Executable $portable }
+    }
     @($portable, $installer) | ForEach-Object {
         $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $(Split-Path -Leaf $_)"
     } | Set-Content -LiteralPath (Join-Path $dist "SHA256SUMS.txt") -Encoding ascii
-    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
+    $notices = @((Join-Path $goRoot "LICENSE"), (Join-Path $repo "licenses/go-qrcode-BSD.txt"), (Join-Path $repo "licenses/ItChat-MIT.txt"), (Join-Path $repo "licenses/WXFileHelper-MIT.txt"))
     Get-Content -LiteralPath $notices | Set-Content -LiteralPath (Join-Path $dist "DEPENDENCY-LICENSES.txt") -Encoding utf8
     Get-ChildItem -LiteralPath $portable,$installer,(Join-Path $dist "SHA256SUMS.txt") | Select-Object FullName,Length
 }

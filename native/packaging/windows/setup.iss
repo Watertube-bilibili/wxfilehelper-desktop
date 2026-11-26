@@ -1,6 +1,6 @@
 #define Repo "https://github.com/Watertube-bilibili/wxfilehelper-desktop"
-#define AppName "WX FileHelper Desktop"
-#define AppPublisher "WX FileHelper Desktop contributors"
+#define AppName "Ultra File"
+#define AppPublisher "Ultra File contributors"
 #define LinkName "WX FileHelper"
 #define RunKey "Software\Microsoft\Windows\CurrentVersion\Run"
 #define RunValue "WXFileHelperDesktop.Native"
@@ -14,7 +14,7 @@ AppPublisherURL={#Repo}
 AppSupportURL={#Repo}/issues
 AppUpdatesURL={#Repo}/releases
 DefaultDirName={localappdata}\Programs\WXFileHelperNative
-DefaultGroupName=WX FileHelper Desktop 1.2
+DefaultGroupName=Ultra File
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
 PrivilegesRequired=lowest
@@ -25,9 +25,9 @@ LicenseFile=..\..\..\LICENSE
 InfoBeforeFile=..\..\..\DISCLAIMER.md
 UninstallDisplayIcon={app}\WXFileHelper.exe
 SetupIconFile=app.ico
-OutputDir=..\..\dist\windows
-OutputBaseFilename=WXFileHelper-{#AppVersion}-Windows-x64-Setup
-Compression=lzma2
+OutputDir=..\..\dist\windows\{#AppVersion}
+OutputBaseFilename=UltraFile-{#AppVersion}-Windows-x64-Setup
+Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
@@ -48,12 +48,13 @@ Name: "autostart"; Description: "登录 Windows 后启动到托盘 / Start in th
 Type: files; Name: "{userdesktop}\{#LinkName}.lnk"; Tasks: not desktopicon; Check: ManageLink('{userdesktop}')
 
 [Files]
-Source: "..\..\dist\windows\WXFileHelper-{#AppVersion}-Windows-x64-Portable.exe"; DestDir: "{app}"; DestName: "WXFileHelper.exe"; Flags: ignoreversion
+Source: "..\..\dist\windows\{#AppVersion}\UltraFile-{#AppVersion}-Windows-x64-Portable.exe"; DestDir: "{app}"; DestName: "WXFileHelper.exe"; Flags: ignoreversion; Check: PayloadNeedsInstall
 Source: "..\..\..\LICENSE"; DestDir: "{app}"
 Source: "..\..\..\DISCLAIMER.md"; DestDir: "{app}"
 Source: "..\..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"
 Source: "..\..\..\licenses\ItChat-MIT.txt"; DestDir: "{app}\licenses"
 Source: "..\..\..\licenses\WXFileHelper-MIT.txt"; DestDir: "{app}\licenses"
+Source: "..\..\..\licenses\go-qrcode-BSD.txt"; DestDir: "{app}\licenses"
 Source: "go-license.txt"; DestDir: "{app}\licenses"
 
 [Icons]
@@ -66,11 +67,19 @@ Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValue}"; Va
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: none; ValueName: "{#RunValue}"; Tasks: not autostart; Flags: dontcreatekey deletevalue; Check: OwnStartupEntry
 
 [Run]
-Filename: "{app}\WXFileHelper.exe"; Description: "Launch / 启动 WX FileHelper Desktop"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\WXFileHelper.exe"; Description: "Launch / 启动 Ultra File"; Flags: nowait postinstall skipifsilent
 
 [Code]
 var
   DesktopLink, SavedForeignLink: String;
+
+function PayloadNeedsInstall: Boolean;
+var
+  Target: String;
+begin
+  Target := ExpandConstant('{app}\WXFileHelper.exe');
+  Result := (not FileExists(Target)) or (CompareText(GetSHA256OfFile(Target), '{#AppHash}') <> 0);
+end;
 
 function OwnStartupEntry: Boolean;
 var
